@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.cache/
+.claude/
+.npm-cache/
+tmp/
+__pycache__/
+*.log
+*.stackdump
+.serena/
+.DS_Store
+Thumbs.db
+tmpclaude-*-cwd

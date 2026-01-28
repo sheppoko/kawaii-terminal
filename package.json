@@ -1,0 +1,86 @@
+{
+  "name": "kawaii-terminal",
+  "version": "2026.1.28-alpha.1",
+  "description": "Cute avatar terminal emulator",
+  "main": "src/main/app/main.js",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "test": "node --test",
+    "lint": "eslint src scripts",
+    "build": "node scripts/set-calver-version.js && electron-builder",
+    "build:win": "node scripts/set-calver-version.js && electron-builder --win",
+    "build:win:portable": "node scripts/set-calver-version.js && electron-builder --win portable",
+    "build:mac": "node scripts/set-calver-version.js && electron-builder --mac"
+  },
+  "keywords": [
+    "terminal",
+    "electron",
+    "avatar"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-serialize": "^0.14.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0",
+    "ansi-html-community": "^0.0.8",
+    "dompurify": "^3.3.1",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.1",
+    "node-pty": "1.2.0-beta.8"
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0",
+    "eslint": "^8.57.0",
+    "png-to-ico": "^3.0.1",
+    "rcedit": "^4.0.1",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.kawaii.terminal",
+    "productName": "kawaii-terminal",
+    "executableName": "kawaii-terminal",
+    "icon": "icon.png",
+    "afterAllArtifactBuild": "scripts/notarize-dmg.js",
+    "afterPack": "scripts/prune-locales.js",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": true,
+      "icon": "icon.icns"
+    },
+    "dmg": {
+      "icon": "icon.icns"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "dir"
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "!**/*.test.js",
+      "!**/*.spec.js"
+    ],
+    "asarUnpack": [
+      "scripts/**/*"
+    ]
+  }
+}
