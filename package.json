@@ -36,10 +36,17 @@
   "devDependencies": {
     "electron": "^40.0.0",
     "electron-builder": "^26.4.0",
-    "eslint": "^8.57.0",
+    "eslint": "^9.39.2",
+    "globals": "^17.2.0",
     "png-to-ico": "^3.0.1",
-    "rcedit": "^4.0.1",
+    "rcedit": "^5.0.2",
     "sharp": "^0.34.5"
+  },
+  "overrides": {
+    "@electron/asar": "4.0.1",
+    "@electron/rebuild": "4.0.3",
+    "rimraf": "5.0.5",
+    "tar": "7.5.7"
   },
   "build": {
     "appId": "com.kawaii.terminal",
