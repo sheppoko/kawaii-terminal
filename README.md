@@ -1,5 +1,7 @@
 # kawaii-terminal
 
+[![Featured on Orynth](https://orynth.dev/api/badge/kawaii-terminal-3850?theme=light&style=default)](https://orynth.dev/projects/kawaii-terminal-3850)
+
 The terminal for Claude Code and Codex.
 Session memory for AI coding: search, rewind, branch from any moment.
 
@@ -68,7 +70,10 @@ If you want a terminal-first workspace that keeps your daily CLI/TUI tools intac
 while adding AI session memory, that is kawaii-terminal.
 
 ## Downloads
-Prebuilt binaries (if available) are on GitHub Releases:
+For the latest downloads, please visit:
+https://kawaii-terminal.dev/
+
+GitHub Releases are also available as a mirror:
 https://github.com/sheppoko/kawaii-terminal/releases
 
 ## Build

@@ -1,5 +1,7 @@
 # kawaii-terminal
 
+[![Featured on Orynth](https://orynth.dev/api/badge/kawaii-terminal-3850?theme=light&style=default)](https://orynth.dev/projects/kawaii-terminal-3850)
+
 Claude Code / Codex 利用者に特化したターミナルです。
 ターミナルの良さを損なわず、コーディングエージェントを使う上で必須の機能を使いやすく詰め込んでいます。
 Windows,macで動作します。(WSLにも実験的に対応済み)
@@ -68,7 +70,10 @@ npm start
 
 ## ダウンロード
 
-ビルド済みバイナリは GitHub Releases で配布しています（本リポジトリが最新です）:
+最新のダウンロードは公式サイトをご確認ください:
+https://kawaii-terminal.dev/
+
+GitHub Releases はミラーとしても提供しています:
 https://github.com/sheppoko/kawaii-terminal/releases
 
 ## ビルド
