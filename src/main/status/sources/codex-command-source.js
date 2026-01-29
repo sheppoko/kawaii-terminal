@@ -266,12 +266,6 @@ class CodexCommandSource {
     const at = Number(activityAt || 0);
     if (!sid || !Number.isFinite(at) || this.pending.size === 0) return false;
     const normalizedSessionCwd = normalizeCwd(sessionCwd);
-    if (!normalizedSessionCwd) {
-      if (Number.isFinite(ttlMs) && ttlMs > 0) {
-        this.prunePending({ ttlMs });
-      }
-      return false;
-    }
     let bestPane = '';
     let bestPositive = Infinity;
     let bestAbs = Infinity;
@@ -281,7 +275,7 @@ class CodexCommandSource {
       const [paneId, info] = entries[i];
       const startedAt = Number(info?.startedAt || info || 0);
       const pendingCwd = normalizeCwd(info?.cwd);
-      if (!pendingCwd || pendingCwd !== normalizedSessionCwd) {
+      if (normalizedSessionCwd && pendingCwd && pendingCwd !== normalizedSessionCwd) {
         hadMismatch = true;
         continue;
       }
