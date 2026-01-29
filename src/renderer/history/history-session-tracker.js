@@ -40,7 +40,6 @@
   function hasVisibleOutput(data) {
     if (!data || typeof data !== 'string') return false;
     // Convert C1 control codes (8-bit) to 7-bit ESC sequences
-    // eslint-disable-next-line no-control-regex
     let text = data
       .replace(/\x90/g, '\x1bP')   // DCS
       .replace(/\x98/g, '\x1bX')   // SOS

@@ -1561,9 +1561,9 @@
         }
       }
 
-      if (scopeKey === 'active') {
-        this.attachGitControls(groupEl, header, group);
-      }
+      // if (scopeKey === 'active') {
+      //   this.attachGitControls(groupEl, header, group);
+      // }
 
       const body = groupEl.querySelector('.session-group-body');
       if (!body) return;
@@ -1994,9 +1994,9 @@
         header.appendChild(badge);
       }
 
-      if ((scope || groupEl.dataset.scope || 'history') === 'active') {
-        this.attachGitControls(groupEl, header, group);
-      }
+      // if ((scope || groupEl.dataset.scope || 'history') === 'active') {
+      //   this.attachGitControls(groupEl, header, group);
+      // }
 
       groupEl.appendChild(header);
 
@@ -2147,6 +2147,7 @@
         }
         timeline.appendChild(fragment);
       } catch (err) {
+        console.warn('Timeline: failed to load session blocks', err);
         this.showTimelineError(timeline);
       }
     }

@@ -788,7 +788,8 @@ class HistoryService {
         try {
           const result = JSON.parse(trimmedStdout);
           settle(result);
-        } catch (e) {
+        } catch (err) {
+          console.warn('HistoryService: invalid JSON response', err?.message || err);
           settle({ error: 'Invalid response' });
         }
       });

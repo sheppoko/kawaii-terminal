@@ -1016,7 +1016,7 @@ function ensureDirWritable(dirPath) {
     fs.writeFileSync(probePath, 'ok');
     fs.unlinkSync(probePath);
     return true;
-  } catch (e) {
+  } catch (_) {
     return false;
   }
 }
@@ -1060,12 +1060,12 @@ function cleanupOldInstanceDirs(rootDir, { prefix = CACHE_INSTANCE_PREFIX, maxAg
           if (now - stat.mtimeMs > maxAgeMs) {
             fs.rmSync(dirPath, { recursive: true, force: true });
           }
-        } catch (e) {
+        } catch (_) {
           // 使用中なら無視
         }
       }
     }
-  } catch (e) {
+  } catch (_) {
     // エラーは無視
   }
 }
