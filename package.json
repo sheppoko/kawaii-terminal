@@ -1,6 +1,6 @@
 {
   "name": "kawaii-terminal",
-  "version": "2026.1.28-alpha.1",
+  "version": "2026.1.29-alpha.1",
   "description": "Cute avatar terminal emulator",
   "main": "src/main/app/main.js",
   "scripts": {

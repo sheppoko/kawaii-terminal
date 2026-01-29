@@ -375,6 +375,7 @@
           result = await window.historyAPI.search(payload);
         } catch (e) {
           if (requestId !== this.searchPaneRequestId) return;
+          console.warn('Search pane: history search failed', e);
           finalize('Search failed.');
           return;
         }

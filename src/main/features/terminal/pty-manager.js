@@ -708,7 +708,7 @@ class PtyManager {
         // Windows CWD detection is unreliable without native code.
         return null;
       }
-    } catch (e) {
+    } catch (_) {
       // Silently fail - CWD detection is best-effort
       return null;
     }
@@ -988,7 +988,7 @@ class PtyManager {
     if (proc) {
       try {
         proc.kill();
-      } catch (e) {
+      } catch (_) {
         // プロセスが既に終了している場合は無視
       }
       this.sessions.delete(tabId);
@@ -999,7 +999,7 @@ class PtyManager {
     for (const proc of this.sessions.values()) {
       try {
         proc.kill();
-      } catch (e) {
+      } catch (_) {
         // プロセスが既に終了している場合は無視
       }
     }

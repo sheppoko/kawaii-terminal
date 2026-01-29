@@ -883,7 +883,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
           // try next candidate
         }
       }
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   },
@@ -919,7 +919,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
       const filePath = path.join(dir, fileName);
       await fs.promises.writeFile(filePath, content, 'utf8');
       return filePath;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   },
@@ -931,7 +931,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
       if (!isWithinDir(filePath, dir)) return false;
       await fs.promises.unlink(filePath);
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   },
@@ -993,7 +993,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
         }
       }
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   },

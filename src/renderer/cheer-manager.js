@@ -333,7 +333,7 @@ class CheerManager {
         if (msg) this.onMessage(msg);
         this.hasAnnouncedAvailability = true;
       }
-    } catch (e) {
+    } catch (_) {
       // Fail silently; cheer will try later
     }
 
