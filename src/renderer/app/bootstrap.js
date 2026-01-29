@@ -769,6 +769,9 @@
         avatarManager.initialize();
         initAvatarPopup();
 
+        // CheerManagerにAvatarManagerを設定（イルカ語変換とアバター切り替えの連携）
+        cheerManager.setAvatarManager(avatarManager);
+
         window.SettingsUI?.initCheerUI?.(cheerManager);
         window.SettingsUI?.initAutoConfigUI?.();
         window.SettingsUI?.initSummarySettingsUI?.();

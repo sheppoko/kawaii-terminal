@@ -1,14 +1,72 @@
+// 利用可能なアバタータイプ
+const AVATAR_TYPES = {
+  default: {
+    open: '../../assets/avatar/default.png',
+    closed: '../../assets/avatar/default-close.png',
+  },
+  dolph: {
+    open: '../../assets/avatar/dolph.png',
+    closed: '../../assets/avatar/dolph-close.png',
+  },
+};
+
 class AvatarManager {
   constructor(imageId) {
     this.imageElement = document.getElementById(imageId);
 
+    // 現在のアバタータイプ
+    this.avatarType = 'default';
+
     // アバター画像
-    this.openImage = '../../assets/avatar/default.png';
-    this.closedImage = '../../assets/avatar/default-close.png';
+    this.openImage = AVATAR_TYPES.default.open;
+    this.closedImage = AVATAR_TYPES.default.closed;
 
     // まばたき設定
     this.blinkTimer = null;
     this.isBlinking = false;
+
+    // 変更リスナー
+    this.changeListeners = [];
+  }
+
+  // アバタータイプを設定
+  setAvatarType(type) {
+    const avatarConfig = AVATAR_TYPES[type];
+    if (!avatarConfig) {
+      console.warn(`Unknown avatar type: ${type}, falling back to default`);
+      type = 'default';
+    }
+
+    this.avatarType = type;
+    this.openImage = AVATAR_TYPES[type].open;
+    this.closedImage = AVATAR_TYPES[type].closed;
+
+    // 現在の画像を更新（まばたき中でなければ）
+    if (!this.isBlinking && this.imageElement) {
+      this.imageElement.src = this.openImage;
+    }
+
+    // リスナーに通知
+    this.changeListeners.forEach(listener => listener(type));
+  }
+
+  // 現在のアバタータイプを取得
+  getAvatarType() {
+    return this.avatarType;
+  }
+
+  // 利用可能なアバタータイプ一覧を取得
+  static getAvailableTypes() {
+    return Object.keys(AVATAR_TYPES);
+  }
+
+  // 変更リスナーを追加
+  onChange(listener) {
+    this.changeListeners.push(listener);
+    return () => {
+      const index = this.changeListeners.indexOf(listener);
+      if (index >= 0) this.changeListeners.splice(index, 1);
+    };
   }
 
   initialize() {

@@ -3,6 +3,51 @@ if (!window.kawaiiDebugLog) {
   window.kawaiiDebugLog = () => {};
 }
 
+// イルカ語変換用のフレーズ
+const DOLPHIN_PHRASES_JA = [
+  'キュイキュイ！',
+  'ピーピー♪',
+  'キュキュキュ〜',
+  'ピピピッ！',
+  'キュイ〜ン♪',
+  'ピュイピュイ！',
+  'キュルルル〜',
+  'ピッピッピー♪',
+  'キュイキュイキュイ！',
+  'ピピー！キュイ〜♪',
+];
+
+const DOLPHIN_PHRASES_EN = [
+  'Squeak squeak!',
+  'Eee eee!',
+  'Click click click!',
+  'Squeee~!',
+  'Eee-ee-ee!',
+  'Click squeak!',
+  'Eee eee eee!',
+  'Squeak~!',
+  'Click click squeak!',
+  'Eee! Click click!',
+];
+
+// メッセージをイルカ語に変換
+function convertToDolphinLanguage(message, language) {
+  if (!message) return message;
+
+  const phrases = language === 'ja' ? DOLPHIN_PHRASES_JA : DOLPHIN_PHRASES_EN;
+
+  // メッセージの長さに応じて1〜3個のフレーズを選択
+  const phraseCount = Math.min(3, Math.max(1, Math.ceil(message.length / 20)));
+  const selectedPhrases = [];
+
+  for (let i = 0; i < phraseCount; i++) {
+    const randomIndex = Math.floor(Math.random() * phrases.length);
+    selectedPhrases.push(phrases[randomIndex]);
+  }
+
+  return selectedPhrases.join(' ');
+}
+
 // メッセージの検証（不適切なら null を返す）
 function validateMessage(message, language) {
   if (!message) return null;
@@ -48,7 +93,12 @@ const DEFAULT_SETTINGS = {
   language: 'en',        // 'ja' | 'en'
   languageSource: 'auto', // 'auto' | 'user'
   minInterval: 1800,     // 秒（30分）
+  avatarType: 'default', // 'default' | 'dolph'
 };
+
+function normalizeAvatarType(value) {
+  return value === 'dolph' ? 'dolph' : 'default';
+}
 
 function normalizeCheerSettings(input, systemLanguage) {
   const baseLanguage = normalizeLanguage(systemLanguage);
@@ -61,11 +111,13 @@ function normalizeCheerSettings(input, systemLanguage) {
   const enabled = typeof raw.enabled === 'boolean' ? raw.enabled : DEFAULT_SETTINGS.enabled;
   const minIntervalRaw = Number(raw.minInterval);
   const minInterval = Number.isFinite(minIntervalRaw) ? Math.max(1, Math.round(minIntervalRaw)) : DEFAULT_SETTINGS.minInterval;
+  const avatarType = normalizeAvatarType(raw.avatarType);
   return {
     enabled,
     language,
     languageSource,
     minInterval,
+    avatarType,
   };
 }
 
@@ -101,6 +153,8 @@ class CheerManager {
     this.availability = { checked: false, available: false, missing: [] };
     this.hasAnnouncedAvailability = false;
     this.settingsUnsubscribe = null;
+    this.avatarManager = null; // AvatarManagerへの参照
+    this.lastOriginalMessage = null; // 変換前のメッセージを保持
 
     // 固定間隔タイマー開始
     this.startIntervalTimer();
@@ -114,6 +168,36 @@ class CheerManager {
         }
       });
     }
+  }
+
+  // AvatarManagerを設定
+  setAvatarManager(avatarManager) {
+    this.avatarManager = avatarManager;
+    // 初期アバタータイプを適用
+    if (this.settings.avatarType && avatarManager) {
+      avatarManager.setAvatarType(this.settings.avatarType);
+    }
+  }
+
+  // メッセージを処理（イルカ語変換を含む）
+  processMessage(message, saveOriginal = true) {
+    if (!message) return message;
+    // 元のメッセージを保存
+    if (saveOriginal) {
+      this.lastOriginalMessage = message;
+    }
+    // dolphアバターの場合はイルカ語に変換
+    if (this.settings.avatarType === 'dolph') {
+      return convertToDolphinLanguage(message, this.settings.language);
+    }
+    return message;
+  }
+
+  // 現在のメッセージを再表示（アバター変更時用）
+  redisplayCurrentMessage() {
+    if (!this.lastOriginalMessage) return;
+    const processed = this.processMessage(this.lastOriginalMessage, false);
+    this.onMessage(processed);
   }
 
   // 固定間隔タイマー
@@ -171,6 +255,7 @@ class CheerManager {
     const wasEnabled = this.settings.enabled;
     const intervalChanged = nextSettings.minInterval !== this.settings.minInterval;
     const languageChanged = nextSettings.language !== this.settings.language;
+    const avatarChanged = nextSettings.avatarType !== this.settings.avatarType;
 
     this.settings = { ...nextSettings };
 
@@ -183,6 +268,14 @@ class CheerManager {
     if (!wasEnabled && this.settings.enabled) {
       this.hasAnnouncedAvailability = false;
       this.ensureAvailability({ announce: true, force: true });
+    }
+    // アバタータイプが変更された場合、AvatarManagerに通知して現在のメッセージを再表示
+    if (avatarChanged) {
+      if (this.avatarManager) {
+        this.avatarManager.setAvatarType(this.settings.avatarType);
+      }
+      // 現在のメッセージを即座に再変換して表示
+      this.redisplayCurrentMessage();
     }
   }
 
@@ -209,7 +302,8 @@ class CheerManager {
       || storedCheer.enabled !== cheer.enabled
       || storedCheer.language !== cheer.language
       || storedCheer.languageSource !== cheer.languageSource
-      || storedCheer.minInterval !== cheer.minInterval) {
+      || storedCheer.minInterval !== cheer.minInterval
+      || storedCheer.avatarType !== cheer.avatarType) {
       patch.cheer = cheer;
     }
     const summaryLanguage = settings?.summaries?.language;
@@ -223,11 +317,13 @@ class CheerManager {
 
   updateSettings(newSettings) {
     const hasLanguageUpdate = Object.prototype.hasOwnProperty.call(newSettings, 'language');
+    const hasAvatarUpdate = Object.prototype.hasOwnProperty.call(newSettings, 'avatarType');
     const languageSource = hasLanguageUpdate ? 'user' : this.settings.languageSource;
     const merged = {
       ...this.settings,
       ...newSettings,
       language: hasLanguageUpdate ? normalizeLanguage(newSettings.language) : this.settings.language,
+      avatarType: hasAvatarUpdate ? normalizeAvatarType(newSettings.avatarType) : this.settings.avatarType,
       languageSource,
     };
     const nextSettings = normalizeCheerSettings(merged, detectSystemLanguage());
@@ -265,7 +361,7 @@ class CheerManager {
       if (!this.availability.available) {
         if (!this.hasAnnouncedAvailability) {
           const msg = getPersonaMessage('missing', this.settings.language);
-          if (msg) this.onMessage(msg);
+          if (msg) this.onMessage(this.processMessage(msg));
           this.hasAnnouncedAvailability = true;
         }
         return;
@@ -285,7 +381,7 @@ class CheerManager {
         };
         if (!this.hasAnnouncedAvailability) {
           const msg = getPersonaMessage('missing', this.settings.language);
-          if (msg) this.onMessage(msg);
+          if (msg) this.onMessage(this.processMessage(msg));
           this.hasAnnouncedAvailability = true;
         }
         return;
@@ -294,7 +390,9 @@ class CheerManager {
       if (result.message) {
         const validated = validateMessage(result.message, this.settings.language);
         if (validated) {
-          this.onMessage(validated);
+          // イルカ語変換を適用
+          const processed = this.processMessage(validated);
+          this.onMessage(processed);
         }
         // session_idを保存（次回継続用）
         if (result.session_id) {
@@ -330,7 +428,7 @@ class CheerManager {
 
       if (announce && this.settings.enabled && !this.hasAnnouncedAvailability) {
         const msg = getPersonaMessage(available ? 'ready' : 'missing', this.settings.language);
-        if (msg) this.onMessage(msg);
+        if (msg) this.onMessage(this.processMessage(msg));
         this.hasAnnouncedAvailability = true;
       }
     } catch (e) {
