@@ -1,9 +1,9 @@
 # kawaii-terminal
+The terminal for Claude Code and Codex.
+Session memory for AI coding: search, rewind, branch from any moment.
 
 [![Featured on Orynth](https://orynth.dev/api/badge/kawaii-terminal-3850?theme=light&style=default)](https://orynth.dev/projects/kawaii-terminal-3850)
 
-The terminal for Claude Code and Codex.
-Session memory for AI coding: search, rewind, branch from any moment.
 
 [日本語](README.ja.md)
 
