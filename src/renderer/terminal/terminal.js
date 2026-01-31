@@ -722,6 +722,22 @@ class TerminalManager {
       scrollback: this.settings.scrollback,
       smoothScrollDuration: 0,  // スムーススクロール無効（ちらつき軽減）
       allowProposedApi: true,
+      linkHandler: {
+        allowNonHttpProtocols: false,
+        activate: (event, text) => {
+          event?.preventDefault?.();
+          if (!this.shouldOpenLink(event)) return;
+          const url = typeof text === 'string' ? text.trim() : '';
+          if (!/^https?:\/\//i.test(url)) return;
+          window.shellAPI?.openExternal?.(url);
+        },
+        hover: (event) => {
+          this.showLinkHintFromEvent(event);
+        },
+        leave: () => {
+          this.hideLinkHint();
+        },
+      },
       theme: getActiveTerminalTheme(),
     });
 

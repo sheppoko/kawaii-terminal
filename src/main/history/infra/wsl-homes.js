@@ -2,6 +2,7 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const { findInPath, pathExists } = require('../../infra/path/path-utils');
 const { sanitizeFsSegment } = require('./wsl-utils');
 
 const WSL_SHARE_ROOTS = ['\\\\wsl$', '\\\\wsl.localhost'];
@@ -62,38 +63,12 @@ function execFileText(command, args, { timeout = 1000 } = {}) {
   });
 }
 
-function pathExists(filePath) {
-  try {
-    return fs.existsSync(filePath);
-  } catch {
-    return false;
-  }
-}
-
-function findInPath(command) {
-  const envPath = process.env.PATH || '';
-  if (!envPath) return null;
-  const pathExts = process.platform === 'win32'
-    ? (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-    : [''];
-  const dirs = envPath.split(path.delimiter).filter(Boolean);
-  for (const dir of dirs) {
-    for (const ext of pathExts) {
-      const fullPath = path.join(dir, `${command}${ext}`);
-      if (!pathExists(fullPath)) continue;
-      if (fullPath.toLowerCase().includes('\\windowsapps\\')) continue;
-      return fullPath;
-    }
-  }
-  return null;
-}
-
 function resolveWslExe() {
   if (process.platform !== 'win32') return null;
   const windir = process.env.WINDIR || 'C:\\Windows';
   const systemPath = path.join(windir, 'System32', 'wsl.exe');
   if (pathExists(systemPath)) return systemPath;
-  const inPath = findInPath('wsl');
+  const inPath = findInPath('wsl', { allowWindowsAppStub: false });
   return inPath || null;
 }
 
