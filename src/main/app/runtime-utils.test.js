@@ -11,8 +11,9 @@ const {
 test('getResetOptionsFromArgs returns options when reset flags present', () => {
   assert.deepEqual(getResetOptionsFromArgs(['--kawaii-reset']), { rollbackClaude: false });
   assert.deepEqual(getResetOptionsFromArgs(['--kawaii-reset=1']), { rollbackClaude: false });
-  assert.deepEqual(getResetOptionsFromArgs(['--kawaii-reset-claude']), { rollbackClaude: true });
-  assert.deepEqual(getResetOptionsFromArgs(['--kawaii-reset-claude=1']), { rollbackClaude: true });
+  assert.deepEqual(getResetOptionsFromArgs(['--kawaii-reset', '--kawaii-reset-claude']), { rollbackClaude: true });
+  assert.deepEqual(getResetOptionsFromArgs(['--kawaii-reset=1', '--kawaii-reset-claude=1']), { rollbackClaude: true });
+  assert.equal(getResetOptionsFromArgs(['--kawaii-reset-claude']), null);
   assert.equal(getResetOptionsFromArgs(['--other']), null);
 });
 
