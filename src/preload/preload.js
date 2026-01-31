@@ -592,7 +592,6 @@ contextBridge.exposeInMainWorld('historyAPI', {
   loadSession: (options) => ipcRenderer.invoke('history:load-session', options || {}),
   getMeta: (options) => ipcRenderer.invoke('history:get-meta', options || {}),
   search: (options) => ipcRenderer.invoke('history:search', options || {}),
-  deepSearch: (options) => ipcRenderer.invoke('history:deep-search', options || {}),
   timeMachine: (payload) => ipcRenderer.invoke('history:time-machine', payload || {}),
   checkCwd: (payload) => ipcRenderer.invoke('history:check-cwd', payload || {}),
   warmupWsl: (options) => ipcRenderer.invoke('history:warmup-wsl', options || {}),

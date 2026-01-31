@@ -160,8 +160,24 @@
     document.body.appendChild(panel);
     const body = panel.querySelector('.status-debug-body');
     let debugVisible = false;
+    let updateTimer = null;
+    const startUpdate = () => {
+      if (updateTimer) return;
+      updateTimer = setInterval(update, 800);
+    };
+    const stopUpdate = () => {
+      if (!updateTimer) return;
+      clearInterval(updateTimer);
+      updateTimer = null;
+    };
     const applyVisibility = () => {
       panel.classList.toggle('is-hidden', !debugVisible);
+      if (debugVisible) {
+        update();
+        startUpdate();
+      } else {
+        stopUpdate();
+      }
     };
     const toggleDebug = () => {
       debugVisible = !debugVisible;
@@ -252,8 +268,6 @@
     };
 
     applyVisibility();
-    update();
-    setInterval(update, 800);
   }
 
   function initWindowResizeHandles() {

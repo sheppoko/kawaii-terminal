@@ -168,6 +168,9 @@ class HistoryRepository {
         limit: max,
         cursor,
         chunk_size,
+        project_path,
+        project_dir,
+        project_scope,
       });
     }
 
@@ -191,7 +194,7 @@ class HistoryRepository {
     });
   }
 
-  async keywordSearchAll({ query, terms, limit, cursor, chunk_size } = {}) {
+  async keywordSearchAll({ query, terms, limit, cursor, chunk_size, project_path, project_dir, project_scope } = {}) {
     const hits = [];
     const seen = new Set();
     const max = Math.max(1, Number(limit) || 1);
@@ -200,6 +203,9 @@ class HistoryRepository {
     const chunkProvided = Number.isFinite(chunk_size);
     const chunkSize = chunkProvided ? Math.max(1, Math.floor(chunk_size)) : 0;
     const targetFiles = chunkSize > 0 ? chunkSize : Number.POSITIVE_INFINITY;
+    const scope = typeof project_scope === 'string' && project_scope.trim()
+      ? project_scope
+      : 'all';
 
     const sources = Array.from(this.connectors?.entries() || [])
       .filter(([id, connector]) => id !== 'all'
@@ -207,7 +213,13 @@ class HistoryRepository {
         && typeof connector?.scanSearchEntry === 'function');
     const listResults = await Promise.all(sources.map(async ([id, connector]) => {
       try {
-        const result = await connector.listSearchEntries({ cursor, chunk_size, project_scope: 'all' });
+        const result = await connector.listSearchEntries({
+          cursor,
+          chunk_size,
+          project_scope: scope,
+          project_path,
+          project_dir,
+        });
         const entries = Array.isArray(result?.entries) ? result.entries : [];
         for (const entry of entries) {
           if (entry && !entry.source) entry.source = connector?.id || id;
