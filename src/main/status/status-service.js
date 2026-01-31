@@ -30,11 +30,12 @@ function buildSessionKey(source, sessionId) {
 }
 
 class StatusService extends EventEmitter {
-  constructor() {
+  constructor(options = {}) {
     super();
     this.statusBySession = new Map();
     this.sessionToPane = new Map();
     this.paneToSession = new Map();
+    this.maxEntries = Number.isFinite(options.maxEntries) ? Math.max(1, Math.floor(options.maxEntries)) : 5000;
   }
 
   snapshot() {
@@ -95,6 +96,7 @@ class StatusService extends EventEmitter {
     };
     this.statusBySession.set(sessionKey, next);
     this.emitUpdate({ entries: [next], removed: [] });
+    this.pruneByLimit();
 
     return next;
   }
@@ -130,12 +132,14 @@ class StatusService extends EventEmitter {
         next = applyDefaultStatus(next);
         this.statusBySession.set(sessionKey, next);
         this.emitUpdate({ entries: [next], removed: [] });
+        this.pruneByLimit();
         return true;
       }
       if (prev && !prev.status && defaultStatus) {
         const next = applyDefaultStatus(prev);
         this.statusBySession.set(sessionKey, next);
         this.emitUpdate({ entries: [next], removed: [] });
+        this.pruneByLimit();
         return true;
       }
       return false;
@@ -146,6 +150,7 @@ class StatusService extends EventEmitter {
       const next = applyDefaultStatus({ ...prev, pane_id: pid });
       this.statusBySession.set(sessionKey, next);
       this.emitUpdate({ entries: [next], removed: [] });
+      this.pruneByLimit();
       return true;
     }
 
@@ -161,6 +166,7 @@ class StatusService extends EventEmitter {
     next = applyDefaultStatus(next);
     this.statusBySession.set(sessionKey, next);
     this.emitUpdate({ entries: [next], removed: [] });
+    this.pruneByLimit();
     return true;
   }
 
@@ -228,6 +234,7 @@ class StatusService extends EventEmitter {
     const next = { ...prev, flags };
     this.statusBySession.set(sessionKey, next);
     this.emitUpdate({ entries: [next], removed: [] });
+    this.pruneByLimit();
   }
 
   removeSession(sessionKey) {
@@ -244,6 +251,25 @@ class StatusService extends EventEmitter {
     }
     this.emitUpdate({ entries: [], removed: [key] });
     return true;
+  }
+
+  pruneByLimit() {
+    const limit = Number.isFinite(this.maxEntries) ? this.maxEntries : 0;
+    if (!limit || this.statusBySession.size <= limit) return;
+    const entries = Array.from(this.statusBySession.values());
+    entries.sort((a, b) => {
+      const aTime = Number(a?.updated_at) || 0;
+      const bTime = Number(b?.updated_at) || 0;
+      return aTime - bTime;
+    });
+    const over = entries.length - limit;
+    if (over <= 0) return;
+    for (let i = 0; i < over; i += 1) {
+      const entry = entries[i];
+      const key = String(entry?.session_key || '').trim();
+      if (!key) continue;
+      this.removeSession(key);
+    }
   }
 
   emitUpdate(payload) {

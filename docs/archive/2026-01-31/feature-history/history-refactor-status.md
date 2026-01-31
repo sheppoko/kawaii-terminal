@@ -26,7 +26,7 @@ History/TimeMachine周りを「Source分離・Builder分離・JSONL I/O分離」
 - TimeMachine失敗時の詳細ログ（source側でconsole.error）
 - HistoryServiceの旧TimeMachine/scan/summary実装の削除（Source/Repository委譲）
 - keywordSearchAll/loadAllRecentのall集約をRepositoryに移動（cursor維持）
-- HistorySource契約の明文化（notes/history/history-source-contract.md）
+- HistorySource契約の明文化（docs/archive/2026-01-31/feature-history/history-source-contract.md）
 - 契約テスト追加（test/history-source-contract.test.js）
 - HistoryService内の重複定数/キャッシュの撤去（history-constants + Source/Repositoryへ）
 - **HistorySyncService追加（main）**: src/main/history/app/history-sync-service.js

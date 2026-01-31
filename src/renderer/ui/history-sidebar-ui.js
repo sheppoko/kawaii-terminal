@@ -1190,6 +1190,17 @@
 
     attachGitControls(groupEl, header, group) {
       if (!groupEl || !header) return;
+      // Git UI is intentionally disabled (unstable feature).
+      const gitUiEnabled = Boolean(window.kawaiiExperimental?.gitPanel);
+      const existingActions = header.querySelector('.session-group-git-actions');
+      if (existingActions) {
+        existingActions.remove();
+      }
+      const existingPanel = groupEl.querySelector('.session-group-git-panel');
+      if (existingPanel) {
+        existingPanel.remove();
+      }
+      if (!gitUiEnabled) return;
       const key = group?.key || '';
       const state = this.getGitState(key);
       if (!state) return;

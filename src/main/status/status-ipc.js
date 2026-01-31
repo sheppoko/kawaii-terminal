@@ -67,6 +67,18 @@ function registerStatusIpc({ ipcMain, statusService, tabRegistry, isTrustedIpcSe
     }
   });
 
+  ipcMain.on('status:output', (event, payload = {}) => {
+    if (!isTrustedIpcSender?.(event)) return;
+    const paneId = String(payload.pane_id || '').trim();
+    const tabId = String(payload.tab_id || '').trim() || extractTabIdFromPaneId(paneId);
+    if (tabId) {
+      const mapped = tabRegistry?.getWebContentsId?.(tabId);
+      if (mapped && mapped !== event.sender.id) return;
+    }
+    const idle = Boolean(payload.idle);
+    statusService.setOutputIdle(paneId, idle);
+  });
+
   statusService.on('update', (payload) => {
     broadcastToAllWindows('status:update', payload);
   });

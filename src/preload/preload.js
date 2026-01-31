@@ -650,6 +650,7 @@ contextBridge.exposeInMainWorld('statusAPI', {
   },
   sendCommand: (payload) => ipcRenderer.send('status:command', payload || {}),
   sendPaneEvent: (payload) => ipcRenderer.send('status:pane', payload || {}),
+  sendOutput: (payload) => ipcRenderer.send('status:output', payload || {}),
 });
 
 // Auto-config API

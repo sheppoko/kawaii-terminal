@@ -6,33 +6,10 @@ const {
 } = require('../utils/utils');
 const { blockHasInput } = require('./builders/session-index-builder');
 const { normalizeSearchTerms } = require('../utils/keyword-search');
+const { normalizeSessionSummary } = require('../../../shared/history/normalize');
 
 const DEFAULT_PAGE_LIMIT = 200;
 const MAX_PAGES = 1000;
-
-function normalizeSessionSummary(session, fallbackSource = '') {
-  if (!session || typeof session !== 'object') return;
-  if (!session.source && fallbackSource && fallbackSource !== 'all') {
-    session.source = fallbackSource;
-  }
-  const createdRaw = session.created_at ?? session.createdAt ?? null;
-  if (typeof createdRaw === 'string') {
-    const ms = Date.parse(createdRaw);
-    if (Number.isFinite(ms)) session.created_at = ms;
-  } else if (typeof createdRaw === 'number') {
-    session.created_at = createdRaw;
-  }
-  const lastRaw = session.last_output_at ?? session.lastOutputAt ?? null;
-  if (typeof lastRaw === 'string') {
-    const ms = Date.parse(lastRaw);
-    if (Number.isFinite(ms)) session.last_output_at = ms;
-  } else if (typeof lastRaw === 'number') {
-    session.last_output_at = lastRaw;
-  }
-  if (!session.last_output_at && session.created_at) {
-    session.last_output_at = session.created_at;
-  }
-}
 
 function normalizeSessionList(list, fallbackSource = '') {
   if (!Array.isArray(list)) return [];

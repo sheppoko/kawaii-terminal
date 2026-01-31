@@ -16,6 +16,9 @@
       this.sessionId = options.sessionId || 'session';
       this.historySource = String(options.historySource || HISTORY_SOURCE).trim().toLowerCase() || HISTORY_SOURCE;
       this.deferInitialLoad = Boolean(options.deferInitialLoad);
+      this.HISTORY_TOAST_DURATION_MS = HISTORY_TOAST_DURATION_MS;
+      this.SESSION_LIST_LIMIT = SESSION_LIST_LIMIT;
+      this.logHistoryDebug = logHistoryDebug;
 
       this.historyProvider = null;
       this.statusProvider = null;
@@ -207,253 +210,43 @@
     }
 
     updateSidebarAgo() {
-      if (!this.store || document.hidden) return;
-      const updateContainer = (root) => {
-        if (!root) return;
-        const items = root.querySelectorAll('.session-item');
-        if (!items.length) return;
-        items.forEach((item) => {
-          const ts = Number(item.dataset.timestamp || '');
-          if (!Number.isFinite(ts)) return;
-          const agoEl = item.querySelector('.session-item-ago')
-            || item.querySelector('.session-item-toggle-ago');
-          if (!agoEl) return;
-          const next = this.store.formatAgo(ts);
-          if (agoEl.textContent !== next) {
-            agoEl.textContent = next;
-          }
-        });
-      };
-      updateContainer(document.getElementById('session-group-list'));
-      updateContainer(document.getElementById('active-session-group-list'));
-      updateContainer(this.searchUI?.getListElement?.());
+      window.HistoryManagerUI?.updateSidebarAgo?.(this);
     }
 
     startSessionTimeTicker() {
-      if (this.sessionTimeInterval) return;
-      this.sessionTimeInterval = setInterval(() => {
-        this.updateSidebarAgo();
-      }, 60000);
+      window.HistoryManagerUI?.startSessionTimeTicker?.(this);
     }
 
     scheduleRender() {
-      if (this.renderPending) {
-        this.renderQueued = true;
-        return;
-      }
-      if (!this.sidebarDirty) return;
-      this.renderPending = true;
-      requestAnimationFrame(() => {
-        this.renderPending = false;
-        if (this.sidebarDirty) this.renderSidebar();
-        if (this.renderQueued) {
-          this.renderQueued = false;
-          this.scheduleRender();
-        }
-      });
+      window.HistoryManagerUI?.scheduleRender?.(this);
     }
 
     renderSidebar() {
-      if (!this.sidebarUI && !this.activeSidebarUI) return;
-      this.sidebarDirty = false;
-      this.sidebarUI?.renderSidebar?.({ loadingSessions: this.loadingSessions });
-      this.activeSidebarUI?.renderSidebar?.({ loadingSessions: this.loadingSessions });
+      window.HistoryManagerUI?.renderSidebar?.(this);
     }
 
     scheduleHistoryReload(delayMs = 800) {
-      if (!this.isExternalHistory() || !this.store) return;
-      if (this.historyReloadTimer) {
-        clearTimeout(this.historyReloadTimer);
-      }
-      this.historyReloadTimer = setTimeout(() => {
-        this.historyReloadTimer = null;
-        const key = this.store.getSourceKey(this.historySource);
-        const cache = this.store.getSessionCache(key);
-        const since = Date.now() - (this.lastInteractionAt || 0);
-        if (since < this.interactionHoldMs) {
-          this.scheduleHistoryReload(Math.max(200, Number(delayMs) || 800));
-          return;
-        }
-        if (!Array.isArray(cache.pendingDeltas) || cache.pendingDeltas.length === 0) {
-          return;
-        }
-        const changed = this.store.flushPendingSessionChanges({ sourceKey: key });
-        if (!changed) return;
-        this.store.applySessionCache(key);
-        this.sessions = this.store.sessions;
-        this.sessionMap = this.store.sessionMap;
-        this.hasMoreSessions = cache.hasMore;
-        this.sidebarDirty = true;
-        this.scheduleRender();
-      }, Math.max(50, Number(delayMs) || 800));
+      window.HistoryManagerSync?.scheduleHistoryReload?.(this, delayMs);
+    }
+
+    sendHistoryAck(source, pending) {
+      window.HistoryManagerSync?.sendHistoryAck?.(this, source, pending);
     }
 
     applyHistoryDeltaPayload(payload, { forceImmediate = false } = {}) {
-      if (!payload || !this.store) return;
-      const source = this.store.getSourceKey(payload?.source || this.historySource);
-      const cache = this.store.getSessionCache(source);
-      const generatedAt = Number(payload?.generated_at) || 0;
-      const changeSet = {
-        added: payload?.added || [],
-        updated: payload?.updated || [],
-        removed: payload?.removed || [],
-        generated_at: generatedAt,
-      };
-      if (payload?.meta?.signature) {
-        cache.lastSignature = payload.meta.signature;
-      }
-      if (typeof payload?.has_more === 'boolean') {
-        cache.hasMore = payload.has_more;
-      }
-      if (Number.isFinite(payload?.next_cursor)) {
-        cache.cursor = payload.next_cursor;
-      }
-      const hasChanges = Boolean(changeSet.added.length || changeSet.updated.length || changeSet.removed.length);
-      if (!hasChanges) return;
-
-      const isCurrent = source === this.store.getSourceKey(this.historySource);
-      const shouldDefer = !forceImmediate
-        && (!this.isPanelActive()
-          || (this.isPanelActive() && (Date.now() - (this.lastInteractionAt || 0)) < this.interactionHoldMs));
-
-      logHistoryDebug({
-        type: 'delta',
-        source,
-        phase: payload?.phase || '',
-        added: changeSet.added.length,
-        updated: changeSet.updated.length,
-        removed: changeSet.removed.length,
-        forceImmediate,
-        shouldDefer,
-        isCurrent,
-      });
-
-      if (!cache.snapshotReady && !cache.loading) {
-        void this.loadSessionSummaries({ sourceKey: source, force: true });
-      }
-
-      if (shouldDefer) {
-        this.store.queueSessionChanges(cache, changeSet);
-        if (isCurrent) {
-          this.scheduleHistoryReload();
-        }
-        return;
-      }
-
-      const changed = this.store.applySessionChanges(cache, changeSet, source);
-      if (!changed) return;
-      if (!cache.snapshotReady) cache.snapshotReady = true;
-      if (isCurrent) {
-        this.store.applySessionCache(source);
-        this.sessions = this.store.sessions;
-        this.sessionMap = this.store.sessionMap;
-        this.hasMoreSessions = cache.hasMore;
-        this.sidebarDirty = true;
-        this.scheduleRender();
-      }
+      window.HistoryManagerSync?.applyHistoryDeltaPayload?.(this, payload, { forceImmediate });
     }
 
     handleHistoryDelta(payload) {
-      if (!payload) return;
-      const isBootstrap = payload?.phase === 'bootstrap';
-      this.applyHistoryDeltaPayload(payload, { forceImmediate: isBootstrap });
-      if (this.sessionDeltaListener) {
-        this.sessionDeltaListener(payload);
-      }
+      window.HistoryManagerSync?.handleHistoryDelta?.(this, payload);
     }
 
     handleHistoryInvalidate(payload) {
-      if (!this.store) return;
-      const source = this.store.getSourceKey(payload?.source || this.historySource);
-      const cache = this.store.getSessionCache(source);
-      cache.pendingDeltas = [];
-      cache.snapshotReady = false;
-      void this.loadSessionSummaries({ sourceKey: source, force: true });
-      if (this.sessionDeltaListener) {
-        this.sessionDeltaListener({ type: 'invalidate', payload });
-      }
+      window.HistoryManagerSync?.handleHistoryInvalidate?.(this, payload);
     }
 
     async loadSessionSummaries({ sourceKey, force = false } = {}) {
-      if (!this.historyProvider?.getSnapshot || !this.store) return;
-      const key = this.store.getSourceKey(sourceKey || this.historySource);
-      const cache = this.store.getSessionCache(key);
-      const isCurrent = key === this.store.getSourceKey(this.historySource);
-
-      if (cache.loading) {
-        cache.pendingReload = true;
-        if (isCurrent) {
-          this.loadingSessions = true;
-          this.sidebarDirty = true;
-          this.scheduleRender();
-        }
-        return;
-      }
-
-      if (!force && this.isPanelActive()) {
-        const since = Date.now() - (this.lastInteractionAt || 0);
-        if (since < this.interactionHoldMs) {
-          cache.pendingReload = true;
-          return;
-        }
-      }
-
-      const requestId = ++cache.loadRequestId;
-      cache.loading = true;
-      cache.pendingReload = false;
-
-      if (isCurrent) {
-        this.loadingSessions = true;
-        this.sidebarDirty = true;
-        this.scheduleRender();
-      }
-
-      let snapshot = null;
-      try {
-        snapshot = await this.historyProvider.getSnapshot({
-          source: key,
-          limit: Math.max(1, cache.loadLimit || SESSION_LIST_LIMIT),
-        });
-      } catch (_) {
-        snapshot = null;
-      }
-
-      if (requestId !== cache.loadRequestId) return;
-
-      cache.loading = false;
-      let deferPending = false;
-      if (snapshot) {
-        this.store.applySessionSnapshot(cache, snapshot, key);
-        const hasPending = Array.isArray(cache.pendingDeltas) && cache.pendingDeltas.length > 0;
-        const canApplyPending = this.isPanelActive()
-          && (Date.now() - (this.lastInteractionAt || 0)) >= this.interactionHoldMs;
-        if (hasPending && canApplyPending) {
-          this.store.flushPendingSessionChanges({ sourceKey: key });
-        } else if (hasPending) {
-          deferPending = true;
-        }
-      }
-
-      const reloadRequested = cache.pendingReload;
-      cache.pendingReload = false;
-      if (deferPending && isCurrent) {
-        this.scheduleHistoryReload();
-      }
-
-      if (isCurrent) {
-        this.store.applySessionCache(key);
-        this.sessions = this.store.sessions;
-        this.sessionMap = this.store.sessionMap;
-        this.loadingSessions = cache.loading;
-        this.hasMoreSessions = cache.hasMore;
-        this.store.syncSessionCacheMeta(key);
-        this.sidebarDirty = true;
-        this.scheduleRender();
-      }
-
-      if (reloadRequested) {
-        void this.loadSessionSummaries({ sourceKey: key });
-      }
+      return window.HistoryManagerSync?.loadSessionSummaries?.(this, { sourceKey, force });
     }
 
     refreshSearchPane() {
@@ -609,18 +402,7 @@
     }
 
     showHistoryToast(message, { tone } = {}) {
-      if (this.sidebarUI?.showHistoryToast) {
-        this.sidebarUI.showHistoryToast(message, { tone });
-        return;
-      }
-      const toastEl = document.getElementById('terminal-preview-toast');
-      if (!toastEl) return;
-      toastEl.textContent = message;
-      toastEl.classList.toggle('error', tone === 'error');
-      toastEl.classList.add('show');
-      setTimeout(() => {
-        toastEl.classList.remove('show');
-      }, HISTORY_TOAST_DURATION_MS);
+      window.HistoryManagerUI?.showHistoryToast?.(this, message, { tone });
     }
   }
 
