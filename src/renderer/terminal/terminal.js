@@ -434,11 +434,19 @@ class TerminalManager {
 
   updateSettings(newSettings) {
     const prevFontFamily = this.settings?.fontFamily;
+    const prevFontSize = this.settings?.fontSize;
     this.settings = { ...this.settings, ...newSettings };
-    if (prevFontFamily !== this.settings?.fontFamily) {
+    const prevResolvedFont = resolveFontFamily(prevFontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily);
+    const nextResolvedFont = resolveFontFamily(this.settings?.fontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily);
+    const fontFamilyChanged = prevResolvedFont !== nextResolvedFont;
+    const fontSizeChanged = prevFontSize !== this.settings?.fontSize;
+    if (fontFamilyChanged) {
       this.fontFamily = this.buildFontFamily();
     }
     this.applySettings();
+    if (fontFamilyChanged || fontSizeChanged) {
+      this.refreshFontRendering();
+    }
   }
 
   applySettings() {
@@ -450,6 +458,25 @@ class TerminalManager {
     }
     this.applyWebglSetting();
     this.handleResize();
+  }
+
+  refreshFontRendering() {
+    const terminal = this.terminal;
+    if (!terminal) return;
+    try {
+      if (typeof terminal.clearTextureAtlas === 'function') {
+        terminal.clearTextureAtlas();
+      }
+      if (this.webglAddon && typeof this.webglAddon.clearTextureAtlas === 'function') {
+        this.webglAddon.clearTextureAtlas();
+      }
+      if (typeof terminal.refresh === 'function') {
+        const lastRow = Math.max(0, terminal.rows - 1);
+        terminal.refresh(0, lastRow);
+      }
+    } catch (err) {
+      console.warn('[TerminalManager] Font refresh failed:', err);
+    }
   }
 
   buildFontFamily() {

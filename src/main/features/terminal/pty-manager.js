@@ -329,12 +329,6 @@ function ensureShellIntegrationFiles() {
     'if [ -n "${KAWAII_ZDOTDIR_SELF:-}" ]; then',
     '  export ZDOTDIR="$KAWAII_ZDOTDIR_SELF"',
     'fi',
-    'if [[ -o interactive ]]; then',
-    '  if [ -z "${KAWAII_ZSHRC_LOADED:-}" ] && [ -r "${KAWAII_ZDOTDIR_SELF}/.zshrc" ]; then',
-    '    source "${KAWAII_ZDOTDIR_SELF}/.zshrc"',
-    '    export KAWAII_ZSHRC_LOADED=1',
-    '  fi',
-    'fi',
     '',
   ].join('\n');
 
@@ -914,7 +908,8 @@ class PtyManager {
         shellArgs = ['-NoLogo', '-NoExit', '-EncodedCommand', encoded];
       } else if (shellName.includes('zsh')) {
         const { zshDir } = ensureShellIntegrationFiles();
-        env.KAWAII_ORIG_ZDOTDIR = process.env.ZDOTDIR || '';
+        const origZdotdir = typeof env.ZDOTDIR === 'string' ? env.ZDOTDIR : '';
+        env.KAWAII_ORIG_ZDOTDIR = origZdotdir;
         if (env.KAWAII_ORIG_ZDOTDIR === zshDir) {
           env.KAWAII_ORIG_ZDOTDIR = '';
         }
