@@ -206,12 +206,17 @@ function clampNumber(value, min, max, fallback) {
   return Math.min(max, Math.max(min, num));
 }
 
+function resolveFontFamily(value, fallback) {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
 function normalizeTerminalSettings(input) {
   const parsed = input && typeof input === 'object' ? input : {};
-  const rawFontFamily = typeof parsed.fontFamily === 'string' ? parsed.fontFamily.trim() : '';
   return {
     fontSize: clampNumber(parsed.fontSize, 10, 32, DEFAULT_TERMINAL_SETTINGS.fontSize),
-    fontFamily: rawFontFamily || DEFAULT_TERMINAL_SETTINGS.fontFamily,
+    fontFamily: resolveFontFamily(parsed.fontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily),
     scrollback: clampNumber(parsed.scrollback, 1000, 50000, DEFAULT_TERMINAL_SETTINGS.scrollback),
     webglEnabled: typeof parsed.webglEnabled === 'boolean'
       ? parsed.webglEnabled
@@ -448,10 +453,7 @@ class TerminalManager {
   }
 
   buildFontFamily() {
-    const custom = typeof this.settings?.fontFamily === 'string'
-      ? this.settings.fontFamily.trim()
-      : '';
-    return custom || DEFAULT_TERMINAL_SETTINGS.fontFamily;
+    return resolveFontFamily(this.settings?.fontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily);
   }
 
   applyWebglSetting() {
