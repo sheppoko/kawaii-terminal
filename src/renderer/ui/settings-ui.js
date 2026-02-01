@@ -38,6 +38,7 @@
 
   function initTerminalSettingsUI(tabManager) {
     const fontSizeInput = document.getElementById('terminal-font-size');
+    const fontFamilyInput = document.getElementById('terminal-font-family');
     const scrollbackInput = document.getElementById('terminal-scrollback');
     const webglToggle = document.getElementById('terminal-webgl');
     if (!fontSizeInput || !scrollbackInput) return;
@@ -45,6 +46,9 @@
     const updateUI = () => {
       const settings = tabManager.getSettings();
       fontSizeInput.value = settings.fontSize;
+      if (fontFamilyInput) {
+        fontFamilyInput.value = settings.fontFamily || '';
+      }
       scrollbackInput.value = settings.scrollback;
       if (webglToggle) {
         webglToggle.checked = Boolean(settings.webglEnabled);
@@ -60,6 +64,15 @@
       const value = clampValue(fontSizeInput.value, 10, 32, currentSettings.fontSize);
       fontSizeInput.value = value;
       tabManager.updateSettingsAll({ fontSize: value });
+    });
+
+    fontFamilyInput?.addEventListener('change', () => {
+      const defaults = window.TerminalSettings?.defaults || {};
+      const fallback = typeof defaults.fontFamily === 'string' ? defaults.fontFamily : '';
+      const raw = String(fontFamilyInput.value || '').trim();
+      const value = raw || fallback;
+      fontFamilyInput.value = value;
+      tabManager.updateSettingsAll({ fontFamily: value });
     });
 
     scrollbackInput.addEventListener('change', () => {

@@ -4,6 +4,7 @@ if (!window.kawaiiDebugLog) {
 
 const DEFAULT_TERMINAL_SETTINGS = {
   fontSize: 14,
+  fontFamily: '"HackGen Console NF", Consolas, monospace',
   scrollback: 5000,
   webglEnabled: true,
 };
@@ -207,8 +208,10 @@ function clampNumber(value, min, max, fallback) {
 
 function normalizeTerminalSettings(input) {
   const parsed = input && typeof input === 'object' ? input : {};
+  const rawFontFamily = typeof parsed.fontFamily === 'string' ? parsed.fontFamily.trim() : '';
   return {
     fontSize: clampNumber(parsed.fontSize, 10, 32, DEFAULT_TERMINAL_SETTINGS.fontSize),
+    fontFamily: rawFontFamily || DEFAULT_TERMINAL_SETTINGS.fontFamily,
     scrollback: clampNumber(parsed.scrollback, 1000, 50000, DEFAULT_TERMINAL_SETTINGS.scrollback),
     webglEnabled: typeof parsed.webglEnabled === 'boolean'
       ? parsed.webglEnabled
@@ -425,7 +428,11 @@ class TerminalManager {
   }
 
   updateSettings(newSettings) {
+    const prevFontFamily = this.settings?.fontFamily;
     this.settings = { ...this.settings, ...newSettings };
+    if (prevFontFamily !== this.settings?.fontFamily) {
+      this.fontFamily = this.buildFontFamily();
+    }
     this.applySettings();
   }
 
@@ -441,8 +448,10 @@ class TerminalManager {
   }
 
   buildFontFamily() {
-    // 内蔵フォント (HackGen Console NF) を最優先で使用
-    return '"HackGen Console NF", Consolas, monospace';
+    const custom = typeof this.settings?.fontFamily === 'string'
+      ? this.settings.fontFamily.trim()
+      : '';
+    return custom || DEFAULT_TERMINAL_SETTINGS.fontFamily;
   }
 
   applyWebglSetting() {
@@ -698,6 +707,7 @@ class TerminalManager {
     if (options.initialSettings) {
       this.settings = normalizeTerminalSettings(options.initialSettings);
     }
+    this.fontFamily = this.buildFontFamily();
 
     // xterm.js はHTMLでグローバルにロード済み
     const Terminal = window.Terminal;
