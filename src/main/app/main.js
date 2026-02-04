@@ -505,6 +505,11 @@ class WindowManager {
       backgroundColor: '#0d0d14',
     };
 
+    if (process.platform === 'darwin') {
+      windowOptions.titleBarStyle = 'hiddenInset';
+      windowOptions.trafficLightPosition = { x: 12, y: 11 };
+    }
+
     if (bounds) {
       if (Number.isFinite(bounds.width)) windowOptions.width = Math.max(400, bounds.width);
       if (Number.isFinite(bounds.height)) windowOptions.height = Math.max(300, bounds.height);

@@ -32,24 +32,10 @@
     });
   }
 
-  function syncMacTitlebarOffsets() {
-    if (!isMac()) {
-      document.body.style.removeProperty('--left-shell-top-offset');
-      return;
-    }
-    const titlebar = document.getElementById('titlebar');
-    if (!titlebar) return;
-    const height = Math.ceil(titlebar.getBoundingClientRect().height || 0);
-    if (height > 0) {
-      document.body.style.setProperty('--left-shell-top-offset', `${height}px`);
-    }
-  }
-
   function initTitlebarStyle() {
     const style = getCurrentStyle();
     applyTitlebarStyle(style);
     document.body.classList.toggle('platform-mac', isMac());
-    syncMacTitlebarOffsets();
 
     const titlebar = document.getElementById('titlebar');
     titlebar?.addEventListener('dblclick', (e) => {
@@ -408,7 +394,6 @@
     initDebugMenu,
     initStatusDebugPanel,
     initWindowResizeHandles,
-    syncTitlebarOffsets: syncMacTitlebarOffsets,
     setResizeFocusHandler,
   };
 })();

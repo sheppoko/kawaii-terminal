@@ -752,7 +752,6 @@
       });
 
       window.addEventListener('resize', () => {
-        window.WindowUI?.syncTitlebarOffsets?.();
         getActiveTerminal()?.handleResize();
         focusActiveTerminalSafely(120);
       });
