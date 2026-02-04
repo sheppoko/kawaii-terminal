@@ -33,13 +33,50 @@ function updateMetaFromFile(meta, file) {
   }
 }
 
+function touchOrder(map, key, value) {
+  if (!map || !key) return;
+  if (map.has(key)) map.delete(key);
+  map.set(key, value);
+}
+
+function evictOldest(map) {
+  if (!map || map.size === 0) return null;
+  let oldestKey = null;
+  let oldestValue = Infinity;
+  for (const [key, value] of map.entries()) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) continue;
+    if (numeric < oldestValue) {
+      oldestValue = numeric;
+      oldestKey = key;
+    }
+  }
+  if (oldestKey == null) {
+    const fallbackKey = map.keys().next().value;
+    if (fallbackKey == null) return null;
+    map.delete(fallbackKey);
+    return fallbackKey;
+  }
+  map.delete(oldestKey);
+  return oldestKey;
+}
+
 class HistorySyncService extends EventEmitter {
-  constructor({ historyService, codexStatusSource, intervalMs = 3000, sessionLimit = 400 } = {}) {
+  constructor({
+    historyService,
+    codexStatusSource,
+    intervalMs = 3000,
+    sessionLimit = 400,
+    sessionStateLimit = 4000,
+    seenFilesLimit = 20000,
+  } = {}) {
     super();
     this.historyService = historyService || null;
     this.codexStatusSource = codexStatusSource || null;
     this.intervalMs = Math.max(200, Number(intervalMs) || 3000);
     this.sessionLimit = Math.max(1, Number(sessionLimit) || 400);
+    this.sessionStateLimit = Math.max(1, Number(sessionStateLimit) || 4000);
+    this.seenFilesLimit = Math.max(1, Number(seenFilesLimit) || 20000);
     this.snapshotPrimeLimit = 1;
     this.bootstrapBatchSize = 5;
     this.timer = null;
@@ -50,6 +87,7 @@ class HistorySyncService extends EventEmitter {
     this.metaBySource = new Map();
     this.sessionState = new Map();
     this.deltaQueues = new Map();
+    this.lastAckBySource = new Map();
   }
 
   resolveSources() {
@@ -73,12 +111,14 @@ class HistorySyncService extends EventEmitter {
     if (!state) {
       state = {
         sessions: new Map(),
+        lru: new Map(),
         hydrating: false,
         hydrated: false,
         refreshing: false,
         refreshPromise: null,
         refreshPending: null,
         seenFiles: new Set(),
+        seenFilesOrder: new Map(),
       };
       this.sessionState.set(key, state);
     }
@@ -89,6 +129,32 @@ class HistorySyncService extends EventEmitter {
     const hinted = adapter?.sessionIndexBuilder?.concurrency;
     if (Number.isFinite(hinted)) return Math.max(1, Math.floor(hinted));
     return 4;
+  }
+
+  touchSessionState(state, sessionKey, touchAt) {
+    if (!state || !sessionKey) return;
+    const timestamp = Number.isFinite(touchAt) && touchAt > 0 ? touchAt : Date.now();
+    touchOrder(state.lru, sessionKey, timestamp);
+    if (state.lru.size <= this.sessionStateLimit) return;
+    while (state.lru.size > this.sessionStateLimit) {
+      const evicted = evictOldest(state.lru);
+      if (!evicted) break;
+      state.sessions.delete(evicted);
+    }
+  }
+
+  touchSeenFile(state, filePath) {
+    if (!state || !filePath) return;
+    if (!state.seenFiles.has(filePath)) {
+      state.seenFiles.add(filePath);
+    }
+    touchOrder(state.seenFilesOrder, filePath, Date.now());
+    if (state.seenFilesOrder.size <= this.seenFilesLimit) return;
+    while (state.seenFilesOrder.size > this.seenFilesLimit) {
+      const evicted = evictOldest(state.seenFilesOrder);
+      if (!evicted) break;
+      state.seenFiles.delete(evicted);
+    }
   }
 
   async start() {
@@ -174,8 +240,8 @@ class HistorySyncService extends EventEmitter {
       const fileMtime = Number(fileInfo?.mtime || fileInfo?.mtimeMs || 0) || 0;
       const fileSize = Number(fileInfo?.size || 0) || 0;
       const isNewFile = Boolean(filePath && !state.seenFiles.has(filePath));
-      if (isNewFile) {
-        state.seenFiles.add(filePath);
+      if (filePath) {
+        this.touchSeenFile(state, filePath);
       }
       const prev = state.sessions.get(sessionKey);
       if (!prev) {
@@ -317,6 +383,7 @@ class HistorySyncService extends EventEmitter {
       filePath,
       fileMtime,
     });
+    this.touchSessionState(state, sessionKey, fileMtime);
 
     const added = prev ? [] : [summary];
     const updated = prev ? [summary] : [];
@@ -350,6 +417,7 @@ class HistorySyncService extends EventEmitter {
           filePath,
           fileMtime,
         });
+        this.touchSessionState(allState, sessionKey, fileMtime);
         if (emitDelta) {
           this.emitDelta({
             source: 'all',
@@ -477,6 +545,62 @@ class HistorySyncService extends EventEmitter {
     }
     combined.signature = metas.map(meta => meta.signature || '').join('|');
     return combined;
+  }
+
+  clearDeltaQueue(source) {
+    const key = String(source || '').trim().toLowerCase();
+    if (!key) return;
+    const queue = this.deltaQueues.get(key);
+    if (!queue) return;
+    queue.items = [];
+    queue.meta = null;
+  }
+
+  resetSourceState(source) {
+    const key = normalizeSource(source, 'all');
+    if (!key) return;
+    const state = this.sessionState.get(key);
+    if (!state) return;
+    state.sessions.clear();
+    state.lru.clear();
+    state.seenFiles.clear();
+    state.seenFilesOrder.clear();
+    state.hydrated = false;
+    state.hydrating = false;
+    state.refreshing = false;
+    state.refreshPromise = null;
+    state.refreshPending = null;
+  }
+
+  handleAck(payload = {}) {
+    const safeSource = normalizeSource(payload?.source, 'all');
+    if (!safeSource) return false;
+    if (payload?.applied === true) {
+      this.lastAckBySource.set(safeSource, Date.now());
+    }
+    return true;
+  }
+
+  invalidate({ source, reason } = {}) {
+    const safeSource = normalizeSource(source, 'all');
+    if (!safeSource) return false;
+    if (safeSource === 'all') {
+      this.resetSourceState('all');
+      this.sources.forEach((src) => this.resetSourceState(src));
+      this.metaBySource.clear();
+      this.deltaQueues.clear();
+    } else {
+      this.resetSourceState(safeSource);
+      this.metaBySource.delete(safeSource);
+      this.clearDeltaQueue(safeSource);
+    }
+    this.emit('invalidate', {
+      version: 1,
+      generated_at: Date.now(),
+      source: safeSource,
+      reason: String(reason || '').trim() || 'manual',
+    });
+    return true;
   }
 
   queueBackgroundRefresh(source) {

@@ -30,13 +30,16 @@ async function mapWithConcurrency(items, limit, task) {
 async function readJsonlFile(filePath, onEntry) {
   return new Promise((resolve) => {
     let done = false;
+    let stream = null;
+    let rl = null;
     const finish = () => {
       if (done) return;
       done = true;
+      try { rl?.close?.(); } catch (_) { /* noop */ }
+      try { stream?.destroy?.(); } catch (_) { /* noop */ }
       resolve();
     };
 
-    let stream;
     try {
       stream = fs.createReadStream(filePath, { encoding: 'utf8' });
     } catch (_) {
@@ -46,11 +49,12 @@ async function readJsonlFile(filePath, onEntry) {
 
     stream.on('error', () => finish());
 
-    const rl = readline.createInterface({
+    rl = readline.createInterface({
       input: stream,
       crlfDelay: Infinity,
     });
 
+    rl.on('error', () => finish());
     rl.on('line', (line) => {
       if (!line) return;
       let entry;

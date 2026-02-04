@@ -161,6 +161,7 @@ async function findFirstClaudeCwdInFile(filePath) {
     }
     stream.on('error', () => finish(''));
     rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    rl.on('error', () => finish(''));
     rl.on('line', (line) => {
       if (!line || resolved) return;
       let entry;

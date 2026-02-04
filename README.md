@@ -37,7 +37,7 @@ npm start
 3) Jump back, branch mid-session, or resume without losing context.
 
 <p align="center">
-  <img src="docs/assets/screenshots/v1.0.3-alpha/readme-main.png" width="860" alt="Session history">
+  <img src="assets/screenshots/v1.0.3-alpha/readme-main.png" width="860" alt="Session history">
 </p>
 
 ## What "fork" means here
@@ -45,7 +45,7 @@ Forking is point-in-time. You can branch from any step inside a session,
 not only from the latest state. Pick a message, keep its exact context, and continue.
 
 <p align="center">
-  <img src="docs/assets/screenshots/v1.0.3-alpha/readme-forkfromany.png" width="860" alt="Fork from any moment">
+  <img src="assets/screenshots/v1.0.3-alpha/readme-forkfromany.png" width="860" alt="Fork from any moment">
 </p>
 
 ## Core features (the point)
@@ -59,7 +59,7 @@ not only from the latest state. Pick a message, keep its exact context, and cont
 - Inline image preview and file path opening.
 
 <p align="center">
-  <img src="docs/assets/screenshots/v1.0.3-alpha/readme-summary.png" width="860" alt="Active agents and session summaries">
+  <img src="assets/screenshots/v1.0.3-alpha/readme-summary.png" width="860" alt="Active agents and session summaries">
 </p>
 
 ## Also includes

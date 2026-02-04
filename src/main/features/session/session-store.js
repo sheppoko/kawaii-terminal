@@ -23,6 +23,11 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+async function ensureDirAsync(dirPath) {
+  if (!dirPath) return;
+  await fs.promises.mkdir(dirPath, { recursive: true });
+}
+
 function sanitizeIdForFilename(value) {
   const raw = String(value || '').trim();
   if (!raw) return crypto.randomUUID();
@@ -44,6 +49,35 @@ function atomicWriteFile(targetPath, content, { encoding = 'utf8' } = {}) {
       fs.copyFileSync(tmpPath, targetPath);
     } finally {
       try { fs.unlinkSync(tmpPath); } catch (_) { /* noop */ }
+    }
+  }
+}
+
+async function atomicWriteFileAsync(targetPath, content, { encoding = 'utf8', shouldCommit } = {}) {
+  const dir = path.dirname(targetPath);
+  await ensureDirAsync(dir);
+  const tmpPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+  await fs.promises.writeFile(tmpPath, content, { encoding });
+  if (typeof shouldCommit === 'function') {
+    let ok = false;
+    try {
+      const result = shouldCommit();
+      ok = result && typeof result.then === 'function' ? await result : Boolean(result);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok) {
+      try { await fs.promises.unlink(tmpPath); } catch (_) { /* noop */ }
+      return false;
+    }
+  }
+  try {
+    await fs.promises.rename(tmpPath, targetPath);
+  } catch (_) {
+    try {
+      await fs.promises.copyFile(tmpPath, targetPath);
+    } finally {
+      try { await fs.promises.unlink(tmpPath); } catch (_) { /* noop */ }
     }
   }
 }
@@ -125,6 +159,9 @@ class SessionStore {
     this.workspace = defaultWorkspaceState();
     this._prevCleanExit = true;
     this._flushTimer = null;
+    this._flushPromise = null;
+    this._flushSeq = 0;
+    this._flushBarrier = 0;
   }
 
   load() {
@@ -164,7 +201,7 @@ class SessionStore {
     this.flushSync();
   }
 
-  markCleanExit({ appVersion } = {}) {
+  async markCleanExit({ appVersion } = {}) {
     const last = this.workspace.lastShutdown || {};
     this.workspace.lastShutdown = {
       ...last,
@@ -174,6 +211,19 @@ class SessionStore {
       appVersion: appVersion || last.appVersion || null,
     };
     this.workspace.savedAt = nowIso();
+    if (this._flushTimer) {
+      clearTimeout(this._flushTimer);
+      this._flushTimer = null;
+    }
+    // Ensure any in-flight async flush finishes before the clean-exit write.
+    const pending = this._flushPromise;
+    if (pending) {
+      try {
+        await pending;
+      } catch (_) {
+        // ignore
+      }
+    }
     this.flushSync();
   }
 
@@ -371,18 +421,36 @@ class SessionStore {
   }
 
   flushSync() {
+    const flushSeq = ++this._flushSeq;
+    this._flushBarrier = flushSeq;
     const json = JSON.stringify(this.workspace, null, 2);
     atomicWriteFile(this.workspacePath, json, { encoding: 'utf8' });
+  }
+
+  async flushAsync() {
+    const flushSeq = ++this._flushSeq;
+    const json = JSON.stringify(this.workspace, null, 2);
+    const write = async () => {
+      try {
+        await atomicWriteFileAsync(this.workspacePath, json, {
+          encoding: 'utf8',
+          shouldCommit: () => flushSeq >= this._flushBarrier,
+        });
+      } catch (_) {
+        // ignore
+      }
+    };
+    this._flushPromise = (this._flushPromise || Promise.resolve()).then(write, write);
+    return this._flushPromise;
   }
 
   scheduleFlush() {
     if (this._flushTimer) return;
     this._flushTimer = setTimeout(() => {
       this._flushTimer = null;
-      this.flushSync();
+      void this.flushAsync();
     }, 500);
   }
 }
 
 module.exports = SessionStore;
-

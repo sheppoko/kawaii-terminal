@@ -32,24 +32,10 @@
     });
   }
 
-  function syncMacTitlebarOffsets() {
-    if (!isMac()) {
-      document.body.style.removeProperty('--left-shell-top-offset');
-      return;
-    }
-    const titlebar = document.getElementById('titlebar');
-    if (!titlebar) return;
-    const height = Math.ceil(titlebar.getBoundingClientRect().height || 0);
-    if (height > 0) {
-      document.body.style.setProperty('--left-shell-top-offset', `${height}px`);
-    }
-  }
-
   function initTitlebarStyle() {
     const style = getCurrentStyle();
     applyTitlebarStyle(style);
     document.body.classList.toggle('platform-mac', isMac());
-    syncMacTitlebarOffsets();
 
     const titlebar = document.getElementById('titlebar');
     titlebar?.addEventListener('dblclick', (e) => {
@@ -160,8 +146,24 @@
     document.body.appendChild(panel);
     const body = panel.querySelector('.status-debug-body');
     let debugVisible = false;
+    let updateTimer = null;
+    const startUpdate = () => {
+      if (updateTimer) return;
+      updateTimer = setInterval(update, 800);
+    };
+    const stopUpdate = () => {
+      if (!updateTimer) return;
+      clearInterval(updateTimer);
+      updateTimer = null;
+    };
     const applyVisibility = () => {
       panel.classList.toggle('is-hidden', !debugVisible);
+      if (debugVisible) {
+        update();
+        startUpdate();
+      } else {
+        stopUpdate();
+      }
     };
     const toggleDebug = () => {
       debugVisible = !debugVisible;
@@ -252,8 +254,6 @@
     };
 
     applyVisibility();
-    update();
-    setInterval(update, 800);
   }
 
   function initWindowResizeHandles() {
@@ -394,7 +394,6 @@
     initDebugMenu,
     initStatusDebugPanel,
     initWindowResizeHandles,
-    syncTitlebarOffsets: syncMacTitlebarOffsets,
     setResizeFocusHandler,
   };
 })();

@@ -3,7 +3,6 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
 const SessionStore = require('../features/session/session-store');
 const NotifyService = require('../features/notify/notify-service');
 const AutoConfigService = require('../features/config/auto-config-service');
@@ -18,9 +17,18 @@ const { PaneLifecycleSource } = require('../status/sources/pane-lifecycle-source
 const { SettingsStore } = require('../core/settings/settings-store');
 const { registerSettingsIpc } = require('../core/settings/settings-ipc');
 const { registerOnboardingIpc } = require('../features/onboarding/onboarding-ipc');
+const { hardenWebContents, isTrustedIpcSender } = require('./navigation-guard');
+const {
+  clampInt,
+  createSessionKey,
+  getResetOptionsFromArgs,
+  normalizeTabId,
+  stripResetArgs,
+} = require('./runtime-utils');
 
 // 終了時のspawnエラーを抑制（node-ptyのクリーンアップ時に発生することがある）
 let isQuitting = false;
+let didFinalizeQuit = false;
 process.on('uncaughtException', (error) => {
   if (isQuitting && error.code === 'ENOENT') {
     // 終了中のENOENTエラーは無視
@@ -100,107 +108,6 @@ function applyMacDockIcon() {
   } catch (e) {
     console.error('[Main] Failed to set macOS dock icon:', e);
   }
-}
-
-function createSessionKey() {
-  try {
-    return `w-${crypto.randomUUID()}`;
-  } catch (_) {
-    return `w-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
-}
-
-function parseUrlSafe(value) {
-  try {
-    return new URL(String(value || ''));
-  } catch (_) {
-    return null;
-  }
-}
-
-function getResetOptionsFromArgs(argv = process.argv) {
-  let resetRequested = false;
-  let rollbackClaude = false;
-  for (const arg of argv || []) {
-    if (arg === '--kawaii-reset' || String(arg || '').startsWith('--kawaii-reset=')) {
-      resetRequested = true;
-    }
-    if (arg === '--kawaii-reset-claude' || arg === '--kawaii-reset-claude=1') {
-      rollbackClaude = true;
-    }
-  }
-  if (!resetRequested) return null;
-  return { rollbackClaude };
-}
-
-function stripResetArgs(argv = process.argv) {
-  return (argv || []).filter((arg) => {
-    const raw = String(arg || '');
-    if (raw === '--kawaii-reset' || raw.startsWith('--kawaii-reset=')) return false;
-    if (raw === '--kawaii-reset-claude' || raw === '--kawaii-reset-claude=1') return false;
-    return true;
-  });
-}
-
-function isIndexHtmlFileUrl(urlString) {
-  if (typeof urlString !== 'string') return false;
-  if (!/^file:/i.test(urlString)) return false;
-  const parsed = parseUrlSafe(urlString);
-  if (!parsed) return false;
-  const pathname = parsed.pathname || '';
-  return pathname.endsWith('/index.html') || pathname.endsWith('index.html');
-}
-
-function isAllowedNavigationUrl(urlString) {
-  if (typeof urlString !== 'string') return false;
-  if (/^devtools:\/\//i.test(urlString)) return true;
-  if (/^about:/i.test(urlString)) return true;
-  if (/^data:text\/html/i.test(urlString)) return true;
-  return isIndexHtmlFileUrl(urlString);
-}
-
-function hardenWebContents(contents) {
-  if (!contents) return;
-  try {
-    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  } catch (_) { /* noop */ }
-
-  const blockIfUntrusted = (event, url) => {
-    if (isAllowedNavigationUrl(url)) return;
-    try {
-      event.preventDefault();
-    } catch (_) { /* noop */ }
-  };
-
-  contents.on('will-navigate', blockIfUntrusted);
-  contents.on('will-redirect', blockIfUntrusted);
-}
-
-function isTrustedIpcSender(event) {
-  try {
-    const url = event?.senderFrame?.url || event?.sender?.getURL?.() || '';
-    return isIndexHtmlFileUrl(url);
-  } catch (_) {
-    return false;
-  }
-}
-
-function clampInt(value, min, max, fallback) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return fallback;
-  const int = Math.floor(num);
-  return Math.min(max, Math.max(min, int));
-}
-
-function normalizeTabId(value) {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (trimmed.length > 160) return null;
-  // dataset/tabId用途なので、制御文字やスペースは拒否
-  // eslint-disable-next-line no-control-regex
-  if (/[\s\x00-\x1f\x7f]/.test(trimmed)) return null;
-  return trimmed;
 }
 
 const WSL_LIST_CACHE_MS = 3000;
@@ -597,6 +504,11 @@ class WindowManager {
       },
       backgroundColor: '#0d0d14',
     };
+
+    if (process.platform === 'darwin') {
+      windowOptions.titleBarStyle = 'hiddenInset';
+      windowOptions.trafficLightPosition = { x: 12, y: 11 };
+    }
 
     if (bounds) {
       if (Number.isFinite(bounds.width)) windowOptions.width = Math.max(400, bounds.width);
@@ -1016,7 +928,7 @@ function ensureDirWritable(dirPath) {
     fs.writeFileSync(probePath, 'ok');
     fs.unlinkSync(probePath);
     return true;
-  } catch (e) {
+  } catch (_) {
     return false;
   }
 }
@@ -1060,12 +972,12 @@ function cleanupOldInstanceDirs(rootDir, { prefix = CACHE_INSTANCE_PREFIX, maxAg
           if (now - stat.mtimeMs > maxAgeMs) {
             fs.rmSync(dirPath, { recursive: true, force: true });
           }
-        } catch (e) {
+        } catch (_) {
           // 使用中なら無視
         }
       }
     }
-  } catch (e) {
+  } catch (_) {
     // エラーは無視
   }
 }
@@ -2193,21 +2105,6 @@ app.on('second-instance', () => {
       });
     });
 
-    ipcMain.handle('history:deep-search', async (event, payload = {}) => {
-      if (!isTrustedIpcSender(event)) return { error: 'Untrusted sender' };
-      const service = await waitForHistoryService();
-      if (!service?.deepSearch) return { error: 'HistoryService not ready' };
-      const { query, source, project_path } = payload || {};
-      const safeQuery = typeof query === 'string' ? query.slice(0, 2000) : '';
-      const safeSource = typeof source === 'string' ? source : undefined;
-      const safeProjectPath = typeof project_path === 'string' ? project_path : undefined;
-      return service.deepSearch({
-        query: safeQuery,
-        source: safeSource,
-        project_path: safeProjectPath,
-      });
-    });
-
     ipcMain.handle('history:time-machine', async (event, payload = {}) => {
       if (!isTrustedIpcSender(event)) return { success: false, error: 'Untrusted sender' };
       const service = await waitForHistoryService();
@@ -2225,13 +2122,18 @@ app.on('second-instance', () => {
 }
 
 // アプリ終了前にPTYを確実にクリーンアップ
-app.on('before-quit', () => {
+app.on('before-quit', async (event) => {
+  if (didFinalizeQuit) return;
+  didFinalizeQuit = true;
+  event.preventDefault();
   isQuitting = true;
   stopTabDragSession();
   // localStorageをディスクにフラッシュ（終了時に保存されない問題の修正）
-  session.defaultSession.flushStorageData();
   try {
-    sessionStore?.markCleanExit?.({ appVersion: app.getVersion() });
+    session.defaultSession.flushStorageData();
+  } catch (_) { /* noop */ }
+  try {
+    await sessionStore?.markCleanExit?.({ appVersion: app.getVersion() });
   } catch (_) { /* noop */ }
   if (ptyManager) {
     ptyManager.killAll();
@@ -2239,6 +2141,7 @@ app.on('before-quit', () => {
   }
   cleanupCachesOnExit();
   cleanupTempPinsOnExit();
+  app.quit();
 });
 
 app.on('window-all-closed', () => {

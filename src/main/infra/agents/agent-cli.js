@@ -1,9 +1,9 @@
 const { execFile, spawn } = require('child_process');
-const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const { listWslDistros, resolveWslExe } = require('../../history/infra/wsl-homes');
+const { findInPath, pathExists } = require('../path/path-utils');
 
 const CLAUDE_FALLBACK_PATHS = [
   path.join(os.homedir(), 'AppData', 'Roaming', 'npm', 'claude.cmd'),
@@ -29,14 +29,6 @@ const SHELL_PATH_MARKER_END = '__KAWAII_TERMINAL_PATH_END__';
 let shellPathCache = null;
 let shellPathCheckedAt = 0;
 let shellPathPromise = null;
-
-function pathExists(filePath) {
-  try {
-    return fs.existsSync(filePath);
-  } catch (_) {
-    return false;
-  }
-}
 
 function getUserShell() {
   const envShell = String(process.env.SHELL || '').trim();
@@ -203,30 +195,6 @@ function resolvePathFromUserShell(timeoutMs = SHELL_PATH_TIMEOUT_MS) {
   });
 
   return shellPathPromise;
-}
-
-function isWindowsAppStub(filePath) {
-  if (!filePath) return false;
-  const normalized = filePath.toLowerCase();
-  return normalized.includes('\\windowsapps\\');
-}
-
-function findInPath(command, { allowWindowsAppStub = true } = {}) {
-  const envPath = process.env.PATH || '';
-  if (!envPath) return null;
-  const pathExts = process.platform === 'win32'
-    ? (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-    : [''];
-  const dirs = envPath.split(path.delimiter).filter(Boolean);
-  for (const dir of dirs) {
-    for (const ext of pathExts) {
-      const fullPath = path.join(dir, `${command}${ext}`);
-      if (!pathExists(fullPath)) continue;
-      if (!allowWindowsAppStub && isWindowsAppStub(fullPath)) continue;
-      return fullPath;
-    }
-  }
-  return null;
 }
 
 function decodeCommandOutput(output) {

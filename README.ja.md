@@ -33,7 +33,7 @@ npm start
 3. 過去のセッションを検索したり、途中から分岐したり、再開したり...
 
 <p align="center">
-  <img src="docs/assets/screenshots/v1.0.3-alpha/readme-main.png" width="860" alt="セッション履歴">
+  <img src="assets/screenshots/v1.0.3-alpha/readme-main.png" width="860" alt="セッション履歴">
 </p>
 
 ## fork（分岐）について
@@ -42,7 +42,7 @@ npm start
 最新の状態からだけでなく、途中のメッセージを選んでそこから別の方向に進められます。
 
 <p align="center">
-  <img src="docs/assets/screenshots/v1.0.3-alpha/readme-forkfromany.png" width="860" alt="任意のポイントから分岐">
+  <img src="assets/screenshots/v1.0.3-alpha/readme-forkfromany.png" width="860" alt="任意のポイントから分岐">
 </p>
 
 ## 主な機能
@@ -57,7 +57,7 @@ npm start
 - **インラインプレビュー** - 画像パスのプレビュー、ファイルパスからのジャンプ
 
 <p align="center">
-  <img src="docs/assets/screenshots/v1.0.3-alpha/readme-summary.png" width="860" alt="Active Agents と要約">
+  <img src="assets/screenshots/v1.0.3-alpha/readme-summary.png" width="860" alt="Active Agents と要約">
 </p>
 
 ## その他

@@ -4,6 +4,7 @@ if (!window.kawaiiDebugLog) {
 
 const DEFAULT_TERMINAL_SETTINGS = {
   fontSize: 14,
+  fontFamily: '"HackGen Console NF", Consolas, monospace',
   scrollback: 5000,
   webglEnabled: true,
 };
@@ -58,6 +59,55 @@ function resolveCssVarColor(varName, fallback) {
   return resolved || fallback || raw;
 }
 
+function normalizeHexColor(value, fallback) {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  if (raw.startsWith('#')) {
+    if (raw.length === 4) {
+      const r = raw[1];
+      const g = raw[2];
+      const b = raw[3];
+      return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+    }
+    if (raw.length >= 7) return raw.slice(0, 7).toLowerCase();
+    return fallback;
+  }
+  const match = raw.match(/rgba?\(([^)]+)\)/i);
+  if (match) {
+    const parts = match[1].split(',').map((part) => part.trim());
+    if (parts.length >= 3) {
+      const toByte = (part) => {
+        if (part.endsWith('%')) {
+          const pct = Math.max(0, Math.min(100, parseFloat(part)));
+          return Math.round((pct / 100) * 255);
+        }
+        return Math.max(0, Math.min(255, parseFloat(part)));
+      };
+      const r = toByte(parts[0]);
+      const g = toByte(parts[1]);
+      const b = toByte(parts[2]);
+      const toHex = (num) => Math.round(num).toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+  }
+  return fallback;
+}
+
+function resolveCssVarHex(varName, fallback) {
+  const resolved = resolveCssVarColor(varName, fallback);
+  return normalizeHexColor(resolved, normalizeHexColor(fallback, fallback));
+}
+
+function getTerminalSearchDecorations() {
+  const matchHighlight = resolveCssVarHex('--kt-color-terminal-ansi-bright-yellow', '#f9f1a5');
+  return {
+    matchBackground: matchHighlight,
+    matchOverviewRuler: matchHighlight,
+    activeMatchBackground: matchHighlight,
+    activeMatchColorOverviewRuler: matchHighlight,
+  };
+}
+
 function getTerminalThemeFromCss() {
   return {
     background: resolveCssVarColor('--kt-color-terminal-bg', TERMINAL_THEME_FALLBACK.background),
@@ -65,6 +115,10 @@ function getTerminalThemeFromCss() {
     cursor: resolveCssVarColor('--kt-color-terminal-cursor', TERMINAL_THEME_FALLBACK.cursor),
     cursorAccent: resolveCssVarColor('--kt-color-terminal-cursor-accent', TERMINAL_THEME_FALLBACK.cursorAccent),
     selectionBackground: resolveCssVarColor('--kt-color-terminal-selection', TERMINAL_THEME_FALLBACK.selectionBackground),
+    selectionInactiveBackground: resolveCssVarColor(
+      '--kt-color-terminal-selection-inactive',
+      TERMINAL_THEME_FALLBACK.selectionBackground
+    ),
     black: resolveCssVarColor('--kt-color-terminal-ansi-black', TERMINAL_THEME_FALLBACK.black),
     red: resolveCssVarColor('--kt-color-terminal-ansi-red', TERMINAL_THEME_FALLBACK.red),
     green: resolveCssVarColor('--kt-color-terminal-ansi-green', TERMINAL_THEME_FALLBACK.green),
@@ -205,10 +259,17 @@ function clampNumber(value, min, max, fallback) {
   return Math.min(max, Math.max(min, num));
 }
 
+function resolveFontFamily(value, fallback) {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
 function normalizeTerminalSettings(input) {
   const parsed = input && typeof input === 'object' ? input : {};
   return {
     fontSize: clampNumber(parsed.fontSize, 10, 32, DEFAULT_TERMINAL_SETTINGS.fontSize),
+    fontFamily: resolveFontFamily(parsed.fontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily),
     scrollback: clampNumber(parsed.scrollback, 1000, 50000, DEFAULT_TERMINAL_SETTINGS.scrollback),
     webglEnabled: typeof parsed.webglEnabled === 'boolean'
       ? parsed.webglEnabled
@@ -425,8 +486,20 @@ class TerminalManager {
   }
 
   updateSettings(newSettings) {
+    const prevFontFamily = this.settings?.fontFamily;
+    const prevFontSize = this.settings?.fontSize;
     this.settings = { ...this.settings, ...newSettings };
+    const prevResolvedFont = resolveFontFamily(prevFontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily);
+    const nextResolvedFont = resolveFontFamily(this.settings?.fontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily);
+    const fontFamilyChanged = prevResolvedFont !== nextResolvedFont;
+    const fontSizeChanged = prevFontSize !== this.settings?.fontSize;
+    if (fontFamilyChanged) {
+      this.fontFamily = this.buildFontFamily();
+    }
     this.applySettings();
+    if (fontFamilyChanged || fontSizeChanged) {
+      this.refreshFontRendering();
+    }
   }
 
   applySettings() {
@@ -440,9 +513,27 @@ class TerminalManager {
     this.handleResize();
   }
 
+  refreshFontRendering() {
+    const terminal = this.terminal;
+    if (!terminal) return;
+    try {
+      if (typeof terminal.clearTextureAtlas === 'function') {
+        terminal.clearTextureAtlas();
+      }
+      if (this.webglAddon && typeof this.webglAddon.clearTextureAtlas === 'function') {
+        this.webglAddon.clearTextureAtlas();
+      }
+      if (typeof terminal.refresh === 'function') {
+        const lastRow = Math.max(0, terminal.rows - 1);
+        terminal.refresh(0, lastRow);
+      }
+    } catch (err) {
+      console.warn('[TerminalManager] Font refresh failed:', err);
+    }
+  }
+
   buildFontFamily() {
-    // 内蔵フォント (HackGen Console NF) を最優先で使用
-    return '"HackGen Console NF", Consolas, monospace';
+    return resolveFontFamily(this.settings?.fontFamily, DEFAULT_TERMINAL_SETTINGS.fontFamily);
   }
 
   applyWebglSetting() {
@@ -698,6 +789,7 @@ class TerminalManager {
     if (options.initialSettings) {
       this.settings = normalizeTerminalSettings(options.initialSettings);
     }
+    this.fontFamily = this.buildFontFamily();
 
     // xterm.js はHTMLでグローバルにロード済み
     const Terminal = window.Terminal;
@@ -722,6 +814,22 @@ class TerminalManager {
       scrollback: this.settings.scrollback,
       smoothScrollDuration: 0,  // スムーススクロール無効（ちらつき軽減）
       allowProposedApi: true,
+      linkHandler: {
+        allowNonHttpProtocols: false,
+        activate: (event, text) => {
+          event?.preventDefault?.();
+          if (!this.shouldOpenLink(event)) return;
+          const url = typeof text === 'string' ? text.trim() : '';
+          if (!/^https?:\/\//i.test(url)) return;
+          window.shellAPI?.openExternal?.(url);
+        },
+        hover: (event) => {
+          this.showLinkHintFromEvent(event);
+        },
+        leave: () => {
+          this.hideLinkHint();
+        },
+      },
       theme: getActiveTerminalTheme(),
     });
 
@@ -1845,6 +1953,7 @@ class TerminalManager {
       caseSensitive: false,
       regex: false,
       wholeWord: false,
+      decorations: getTerminalSearchDecorations(),
     });
   }
 
@@ -1854,6 +1963,7 @@ class TerminalManager {
       caseSensitive: false,
       regex: false,
       wholeWord: false,
+      decorations: getTerminalSearchDecorations(),
     });
   }
 

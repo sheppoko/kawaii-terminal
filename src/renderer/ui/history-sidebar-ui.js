@@ -1190,6 +1190,17 @@
 
     attachGitControls(groupEl, header, group) {
       if (!groupEl || !header) return;
+      // Git UI is intentionally disabled (unstable feature).
+      const gitUiEnabled = Boolean(window.kawaiiExperimental?.gitPanel);
+      const existingActions = header.querySelector('.session-group-git-actions');
+      if (existingActions) {
+        existingActions.remove();
+      }
+      const existingPanel = groupEl.querySelector('.session-group-git-panel');
+      if (existingPanel) {
+        existingPanel.remove();
+      }
+      if (!gitUiEnabled) return;
       const key = group?.key || '';
       const state = this.getGitState(key);
       if (!state) return;
@@ -1561,9 +1572,9 @@
         }
       }
 
-      if (scopeKey === 'active') {
-        this.attachGitControls(groupEl, header, group);
-      }
+      // if (scopeKey === 'active') {
+      //   this.attachGitControls(groupEl, header, group);
+      // }
 
       const body = groupEl.querySelector('.session-group-body');
       if (!body) return;
@@ -1994,9 +2005,9 @@
         header.appendChild(badge);
       }
 
-      if ((scope || groupEl.dataset.scope || 'history') === 'active') {
-        this.attachGitControls(groupEl, header, group);
-      }
+      // if ((scope || groupEl.dataset.scope || 'history') === 'active') {
+      //   this.attachGitControls(groupEl, header, group);
+      // }
 
       groupEl.appendChild(header);
 
@@ -2147,6 +2158,7 @@
         }
         timeline.appendChild(fragment);
       } catch (err) {
+        console.warn('Timeline: failed to load session blocks', err);
         this.showTimelineError(timeline);
       }
     }

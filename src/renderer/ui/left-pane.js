@@ -2,7 +2,7 @@
   'use strict';
 
   const SESSION_SIDEBAR_STORAGE_KEY = 'kawaii-terminal-session-sidebar-visible';
-  const LEFT_PANE_WIDTH_KEY = 'kawaii-terminal-left-pane-width';
+  const LEFT_PANE_WIDTH_KEY = 'kawaii-terminal-left-pane-width-v2';
   const DEFAULT_LEFT_PANE_WIDTH = 360;
   const LEFT_PANE_FONT_SCALE_KEY = 'kawaii-terminal-left-pane-font-scale';
   const DEFAULT_LEFT_PANE_FONT_SCALE = 1;

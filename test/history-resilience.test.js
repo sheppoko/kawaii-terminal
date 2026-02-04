@@ -7,12 +7,14 @@ const path = require('path');
 const originalHome = process.env.HOME;
 const originalUserProfile = process.env.USERPROFILE;
 const originalCodexHome = process.env.CODEX_HOME;
+const originalDisableWslScan = process.env.KAWAII_DISABLE_WSL_SCAN;
 const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'kawaii-home-'));
 const tempCodexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'kawaii-codex-'));
 
 process.env.HOME = tempHome;
 process.env.USERPROFILE = tempHome;
 process.env.CODEX_HOME = tempCodexHome;
+process.env.KAWAII_DISABLE_WSL_SCAN = '1';
 
 const { createDefaultSources } = require('../src/main/history/domain/sources');
 const HistoryRepository = require('../src/main/history/domain/repository');
@@ -47,6 +49,11 @@ test.after(() => {
     delete process.env.CODEX_HOME;
   } else {
     process.env.CODEX_HOME = originalCodexHome;
+  }
+  if (originalDisableWslScan == null) {
+    delete process.env.KAWAII_DISABLE_WSL_SCAN;
+  } else {
+    process.env.KAWAII_DISABLE_WSL_SCAN = originalDisableWslScan;
   }
   fs.rmSync(tempHome, { recursive: true, force: true });
   fs.rmSync(tempCodexHome, { recursive: true, force: true });

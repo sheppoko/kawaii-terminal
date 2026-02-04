@@ -6,33 +6,10 @@ const {
 } = require('../utils/utils');
 const { blockHasInput } = require('./builders/session-index-builder');
 const { normalizeSearchTerms } = require('../utils/keyword-search');
+const { normalizeSessionSummary } = require('../../../shared/history/normalize');
 
 const DEFAULT_PAGE_LIMIT = 200;
 const MAX_PAGES = 1000;
-
-function normalizeSessionSummary(session, fallbackSource = '') {
-  if (!session || typeof session !== 'object') return;
-  if (!session.source && fallbackSource && fallbackSource !== 'all') {
-    session.source = fallbackSource;
-  }
-  const createdRaw = session.created_at ?? session.createdAt ?? null;
-  if (typeof createdRaw === 'string') {
-    const ms = Date.parse(createdRaw);
-    if (Number.isFinite(ms)) session.created_at = ms;
-  } else if (typeof createdRaw === 'number') {
-    session.created_at = createdRaw;
-  }
-  const lastRaw = session.last_output_at ?? session.lastOutputAt ?? null;
-  if (typeof lastRaw === 'string') {
-    const ms = Date.parse(lastRaw);
-    if (Number.isFinite(ms)) session.last_output_at = ms;
-  } else if (typeof lastRaw === 'number') {
-    session.last_output_at = lastRaw;
-  }
-  if (!session.last_output_at && session.created_at) {
-    session.last_output_at = session.created_at;
-  }
-}
 
 function normalizeSessionList(list, fallbackSource = '') {
   if (!Array.isArray(list)) return [];
@@ -191,6 +168,9 @@ class HistoryRepository {
         limit: max,
         cursor,
         chunk_size,
+        project_path,
+        project_dir,
+        project_scope,
       });
     }
 
@@ -214,7 +194,7 @@ class HistoryRepository {
     });
   }
 
-  async keywordSearchAll({ query, terms, limit, cursor, chunk_size } = {}) {
+  async keywordSearchAll({ query, terms, limit, cursor, chunk_size, project_path, project_dir, project_scope } = {}) {
     const hits = [];
     const seen = new Set();
     const max = Math.max(1, Number(limit) || 1);
@@ -223,6 +203,9 @@ class HistoryRepository {
     const chunkProvided = Number.isFinite(chunk_size);
     const chunkSize = chunkProvided ? Math.max(1, Math.floor(chunk_size)) : 0;
     const targetFiles = chunkSize > 0 ? chunkSize : Number.POSITIVE_INFINITY;
+    const scope = typeof project_scope === 'string' && project_scope.trim()
+      ? project_scope
+      : 'all';
 
     const sources = Array.from(this.connectors?.entries() || [])
       .filter(([id, connector]) => id !== 'all'
@@ -230,7 +213,13 @@ class HistoryRepository {
         && typeof connector?.scanSearchEntry === 'function');
     const listResults = await Promise.all(sources.map(async ([id, connector]) => {
       try {
-        const result = await connector.listSearchEntries({ cursor, chunk_size, project_scope: 'all' });
+        const result = await connector.listSearchEntries({
+          cursor,
+          chunk_size,
+          project_scope: scope,
+          project_path,
+          project_dir,
+        });
         const entries = Array.isArray(result?.entries) ? result.entries : [];
         for (const entry of entries) {
           if (entry && !entry.source) entry.source = connector?.id || id;

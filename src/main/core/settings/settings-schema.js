@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   },
   terminal: {
     fontSize: 14,
+    fontFamily: '"HackGen Console NF", Consolas, monospace',
     scrollback: 5000,
     webglEnabled: true,
   },
@@ -124,6 +125,11 @@ function normalizeSettings(raw) {
   }
   if (!Number.isFinite(merged.terminal.fontSize)) {
     merged.terminal.fontSize = DEFAULT_SETTINGS.terminal.fontSize;
+  }
+  if (typeof merged.terminal.fontFamily !== 'string') {
+    merged.terminal.fontFamily = DEFAULT_SETTINGS.terminal.fontFamily;
+  } else if (!merged.terminal.fontFamily.trim()) {
+    merged.terminal.fontFamily = DEFAULT_SETTINGS.terminal.fontFamily;
   }
   if (!Number.isFinite(merged.terminal.scrollback)) {
     merged.terminal.scrollback = DEFAULT_SETTINGS.terminal.scrollback;

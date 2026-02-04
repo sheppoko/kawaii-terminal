@@ -592,7 +592,6 @@ contextBridge.exposeInMainWorld('historyAPI', {
   loadSession: (options) => ipcRenderer.invoke('history:load-session', options || {}),
   getMeta: (options) => ipcRenderer.invoke('history:get-meta', options || {}),
   search: (options) => ipcRenderer.invoke('history:search', options || {}),
-  deepSearch: (options) => ipcRenderer.invoke('history:deep-search', options || {}),
   timeMachine: (payload) => ipcRenderer.invoke('history:time-machine', payload || {}),
   checkCwd: (payload) => ipcRenderer.invoke('history:check-cwd', payload || {}),
   warmupWsl: (options) => ipcRenderer.invoke('history:warmup-wsl', options || {}),
@@ -650,6 +649,7 @@ contextBridge.exposeInMainWorld('statusAPI', {
   },
   sendCommand: (payload) => ipcRenderer.send('status:command', payload || {}),
   sendPaneEvent: (payload) => ipcRenderer.send('status:pane', payload || {}),
+  sendOutput: (payload) => ipcRenderer.send('status:output', payload || {}),
 });
 
 // Auto-config API
@@ -883,7 +883,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
           // try next candidate
         }
       }
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   },
@@ -919,7 +919,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
       const filePath = path.join(dir, fileName);
       await fs.promises.writeFile(filePath, content, 'utf8');
       return filePath;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   },
@@ -931,7 +931,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
       if (!isWithinDir(filePath, dir)) return false;
       await fs.promises.unlink(filePath);
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   },
@@ -993,7 +993,7 @@ contextBridge.exposeInMainWorld('fileAPI', {
         }
       }
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   },

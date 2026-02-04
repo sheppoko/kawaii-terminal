@@ -49,6 +49,8 @@
   const TERMINAL_LOADING_DELAY_MS = 500;
   const RESTORE_PREFILL_ENABLED = false;
 
+  window.TabTransfer?.init?.({ windowId: WINDOW_ID });
+
   const clampValue = window.KawaiiUtils?.clampNumber
     || ((value, min, max, fallbackValue) => {
       const num = Number(value);
@@ -477,8 +479,6 @@
       }
       logStartup('initialSession loaded', { restore: SHOULD_RESTORE_SESSION, hasSession: Boolean(initialSession) });
 
-      window.TabTransfer?.init?.({ windowId: WINDOW_ID });
-
       let historyBootstrapStarted = false;
       const startHistoryBootstrap = () => {
         if (historyBootstrapStarted) return;
@@ -528,6 +528,7 @@
         if (!entries || typeof entries.forEach !== 'function') return;
         const paneEls = document.querySelectorAll('.terminal-pane[data-pane-id]');
         const livePaneIds = new Set();
+        const localPanePrefix = `pane-tab-${WINDOW_ID}-`;
         paneEls.forEach((el) => {
           const pid = el?.dataset?.paneId;
           if (pid) livePaneIds.add(pid);
@@ -535,6 +536,7 @@
         entries.forEach((entry) => {
           const paneId = String(entry?.pane_id || '').trim();
           if (!paneId) return;
+          if (localPanePrefix && !paneId.startsWith(localPanePrefix)) return;
           if (livePaneIds.has(paneId)) return;
           window.statusAPI?.sendPaneEvent?.({
             pane_id: paneId,
@@ -750,7 +752,6 @@
       });
 
       window.addEventListener('resize', () => {
-        window.WindowUI?.syncTitlebarOffsets?.();
         getActiveTerminal()?.handleResize();
         focusActiveTerminalSafely(120);
       });
@@ -783,6 +784,7 @@
         const writeClipboardText = window.ClipboardUtils?.writeText || (async () => false);
         dispatchAction = window.ActionDispatcher?.createActionDispatcher?.({
           getActiveTerminal,
+          searchUI,
           tabManager,
           pinManager,
           getShortcutSheet: () => shortcutSheet,

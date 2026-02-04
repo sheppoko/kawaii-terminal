@@ -2,11 +2,17 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const { findInPath, pathExists } = require('../../infra/path/path-utils');
 const { sanitizeFsSegment } = require('./wsl-utils');
 
 const WSL_SHARE_ROOTS = ['\\\\wsl$', '\\\\wsl.localhost'];
 const WSL_SCAN_CACHE_MS = 60_000;
 const WSL_EXEC_TIMEOUT_MS = 4000;
+const WSL_DISABLE_ENV = [
+  'KAWAII_DISABLE_WSL_SCAN',
+  'KAWAII_DISABLE_WSL_HISTORY',
+  'KAWAII_DISABLE_WSL',
+];
 
 let wslDistroCache = { list: [], fetchedAt: 0, pending: null };
 let wslHomeCache = { list: [], fetchedAt: 0, pending: null };
@@ -14,6 +20,20 @@ let logWsl = () => {};
 
 function setWslLogger(logger) {
   logWsl = typeof logger === 'function' ? logger : () => {};
+}
+
+function isTruthyEnv(value) {
+  if (value == null) return false;
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return false;
+  return !['0', 'false', 'no', 'off'].includes(normalized);
+}
+
+function shouldSkipWslScan() {
+  for (const key of WSL_DISABLE_ENV) {
+    if (isTruthyEnv(process.env[key])) return true;
+  }
+  return false;
 }
 
 function decodeCommandOutput(output) {
@@ -62,38 +82,12 @@ function execFileText(command, args, { timeout = 1000 } = {}) {
   });
 }
 
-function pathExists(filePath) {
-  try {
-    return fs.existsSync(filePath);
-  } catch {
-    return false;
-  }
-}
-
-function findInPath(command) {
-  const envPath = process.env.PATH || '';
-  if (!envPath) return null;
-  const pathExts = process.platform === 'win32'
-    ? (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-    : [''];
-  const dirs = envPath.split(path.delimiter).filter(Boolean);
-  for (const dir of dirs) {
-    for (const ext of pathExts) {
-      const fullPath = path.join(dir, `${command}${ext}`);
-      if (!pathExists(fullPath)) continue;
-      if (fullPath.toLowerCase().includes('\\windowsapps\\')) continue;
-      return fullPath;
-    }
-  }
-  return null;
-}
-
 function resolveWslExe() {
   if (process.platform !== 'win32') return null;
   const windir = process.env.WINDIR || 'C:\\Windows';
   const systemPath = path.join(windir, 'System32', 'wsl.exe');
   if (pathExists(systemPath)) return systemPath;
-  const inPath = findInPath('wsl');
+  const inPath = findInPath('wsl', { allowWindowsAppStub: false });
   return inPath || null;
 }
 
@@ -133,6 +127,7 @@ async function listWslShareDistros(shareRoot) {
 
 async function listWslDistros() {
   if (process.platform !== 'win32') return [];
+  if (shouldSkipWslScan()) return [];
   const now = Date.now();
   if (wslDistroCache.fetchedAt && now - wslDistroCache.fetchedAt < WSL_SCAN_CACHE_MS) {
     return wslDistroCache.list;
@@ -203,6 +198,7 @@ async function listWslDistros() {
 
 async function listWslHomes() {
   if (process.platform !== 'win32') return [];
+  if (shouldSkipWslScan()) return [];
   const now = Date.now();
   if (wslHomeCache.fetchedAt && now - wslHomeCache.fetchedAt < WSL_SCAN_CACHE_MS) {
     return wslHomeCache.list;
@@ -266,11 +262,13 @@ async function listWslHomes() {
 }
 
 function getCachedWslHomes() {
+  if (shouldSkipWslScan()) return [];
   return Array.isArray(wslHomeCache.list) ? wslHomeCache.list : [];
 }
 
 async function ensureWslHomesLoaded() {
   if (process.platform !== 'win32') return;
+  if (shouldSkipWslScan()) return;
   await listWslHomes();
 }
 
