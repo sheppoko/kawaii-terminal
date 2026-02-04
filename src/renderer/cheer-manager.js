@@ -30,14 +30,9 @@ const DOLPHIN_PHRASES_EN = [
   'Eee! Click click!',
 ];
 
-// メッセージをイルカ語に変換
-function convertToDolphinLanguage(message, language) {
-  if (!message) return message;
-
+function buildRandomDolphinMessage(language) {
   const phrases = language === 'ja' ? DOLPHIN_PHRASES_JA : DOLPHIN_PHRASES_EN;
-
-  // メッセージの長さに応じて1〜3個のフレーズを選択
-  const phraseCount = Math.min(3, Math.max(1, Math.ceil(message.length / 20)));
+  const phraseCount = Math.floor(Math.random() * 3) + 1;
   const selectedPhrases = [];
 
   for (let i = 0; i < phraseCount; i++) {
@@ -154,13 +149,22 @@ class CheerManager {
     this.hasAnnouncedAvailability = false;
     this.settingsUnsubscribe = null;
     this.avatarManager = null; // AvatarManagerへの参照
-    this.lastOriginalMessage = null; // 変換前のメッセージを保持
+    this.lastCheerMessage = null;
 
     // 固定間隔タイマー開始
     this.startIntervalTimer();
-    this.ensureAvailability({ announce: true });
 
-    this.refreshSettingsFromStore();
+    const initialSettingsPromise = this.refreshSettingsFromStore();
+    if (initialSettingsPromise && typeof initialSettingsPromise.finally === 'function') {
+      initialSettingsPromise.finally(() => {
+        if (this.settings.enabled && !this.isDolphinMode()) {
+          this.ensureAvailability({ announce: true, force: true });
+        }
+      });
+    } else if (this.settings.enabled && !this.isDolphinMode()) {
+      this.ensureAvailability({ announce: true, force: true });
+    }
+
     if (window.settingsAPI?.onChange) {
       this.settingsUnsubscribe = window.settingsAPI.onChange((payload) => {
         if (payload?.settings) {
@@ -179,25 +183,33 @@ class CheerManager {
     }
   }
 
-  // メッセージを処理（イルカ語変換を含む）
-  processMessage(message, saveOriginal = true) {
-    if (!message) return message;
-    // 元のメッセージを保存
-    if (saveOriginal) {
-      this.lastOriginalMessage = message;
+  isDolphinMode() {
+    return this.settings.avatarType === 'dolph';
+  }
+
+  displayCheerMessage(message, { save = true } = {}) {
+    if (!message) return;
+    if (save) {
+      this.lastCheerMessage = message;
     }
-    // dolphアバターの場合はイルカ語に変換
-    if (this.settings.avatarType === 'dolph') {
-      return convertToDolphinLanguage(message, this.settings.language);
-    }
-    return message;
+    if (this.isDolphinMode()) return;
+    this.onMessage(message);
+  }
+
+  displayDolphinMessage() {
+    if (!this.isDolphinMode()) return;
+    const message = buildRandomDolphinMessage(this.settings.language);
+    if (message) this.onMessage(message);
   }
 
   // 現在のメッセージを再表示（アバター変更時用）
   redisplayCurrentMessage() {
-    if (!this.lastOriginalMessage) return;
-    const processed = this.processMessage(this.lastOriginalMessage, false);
-    this.onMessage(processed);
+    if (this.isDolphinMode()) {
+      this.displayDolphinMessage();
+      return;
+    }
+    if (!this.lastCheerMessage) return;
+    this.onMessage(this.lastCheerMessage);
   }
 
   // 固定間隔タイマー
@@ -265,7 +277,7 @@ class CheerManager {
     if (intervalChanged) {
       this.startIntervalTimer();
     }
-    if (!wasEnabled && this.settings.enabled) {
+    if (!wasEnabled && this.settings.enabled && !this.isDolphinMode()) {
       this.hasAnnouncedAvailability = false;
       this.ensureAvailability({ announce: true, force: true });
     }
@@ -274,8 +286,14 @@ class CheerManager {
       if (this.avatarManager) {
         this.avatarManager.setAvatarType(this.settings.avatarType);
       }
-      // 現在のメッセージを即座に再変換して表示
-      this.redisplayCurrentMessage();
+      if (this.isDolphinMode()) {
+        this.availability = { checked: true, available: true, missing: [] };
+        this.displayDolphinMessage();
+      } else {
+        this.hasAnnouncedAvailability = false;
+        this.ensureAvailability({ announce: true, force: true });
+        this.redisplayCurrentMessage();
+      }
     }
   }
 
@@ -349,6 +367,16 @@ class CheerManager {
     // 表示できない時は生成しない（トークン節約）
     if (isAvatarPanelCollapsed()) return;
 
+    if (this.isDolphinMode()) {
+      this.isRequesting = true;
+      try {
+        this.displayDolphinMessage();
+      } finally {
+        this.isRequesting = false;
+      }
+      return;
+    }
+
     window.kawaiiDebugLog('[Cheer] Requesting cheer, session_id:', this.sessionId || '(new)');
 
     this.isRequesting = true;
@@ -361,7 +389,7 @@ class CheerManager {
       if (!this.availability.available) {
         if (!this.hasAnnouncedAvailability) {
           const msg = getPersonaMessage('missing', this.settings.language);
-          if (msg) this.onMessage(this.processMessage(msg));
+          if (msg) this.displayCheerMessage(msg);
           this.hasAnnouncedAvailability = true;
         }
         return;
@@ -381,7 +409,7 @@ class CheerManager {
         };
         if (!this.hasAnnouncedAvailability) {
           const msg = getPersonaMessage('missing', this.settings.language);
-          if (msg) this.onMessage(this.processMessage(msg));
+          if (msg) this.displayCheerMessage(msg);
           this.hasAnnouncedAvailability = true;
         }
         return;
@@ -390,9 +418,7 @@ class CheerManager {
       if (result.message) {
         const validated = validateMessage(result.message, this.settings.language);
         if (validated) {
-          // イルカ語変換を適用
-          const processed = this.processMessage(validated);
-          this.onMessage(processed);
+          this.displayCheerMessage(validated);
         }
         // session_idを保存（次回継続用）
         if (result.session_id) {
@@ -412,6 +438,10 @@ class CheerManager {
   }
 
   async ensureAvailability({ announce = false, force = false } = {}) {
+    if (this.isDolphinMode()) {
+      this.availability = { checked: true, available: true, missing: [] };
+      return this.availability;
+    }
     if (!window.cheerAPI?.checkAvailability) return this.availability;
     if (this.availability.checked && !force) return this.availability;
 
@@ -428,7 +458,7 @@ class CheerManager {
 
       if (announce && this.settings.enabled && !this.hasAnnouncedAvailability) {
         const msg = getPersonaMessage(available ? 'ready' : 'missing', this.settings.language);
-        if (msg) this.onMessage(this.processMessage(msg));
+        if (msg) this.displayCheerMessage(msg);
         this.hasAnnouncedAvailability = true;
       }
     } catch (_) {
