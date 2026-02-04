@@ -59,6 +59,55 @@ function resolveCssVarColor(varName, fallback) {
   return resolved || fallback || raw;
 }
 
+function normalizeHexColor(value, fallback) {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  if (raw.startsWith('#')) {
+    if (raw.length === 4) {
+      const r = raw[1];
+      const g = raw[2];
+      const b = raw[3];
+      return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+    }
+    if (raw.length >= 7) return raw.slice(0, 7).toLowerCase();
+    return fallback;
+  }
+  const match = raw.match(/rgba?\(([^)]+)\)/i);
+  if (match) {
+    const parts = match[1].split(',').map((part) => part.trim());
+    if (parts.length >= 3) {
+      const toByte = (part) => {
+        if (part.endsWith('%')) {
+          const pct = Math.max(0, Math.min(100, parseFloat(part)));
+          return Math.round((pct / 100) * 255);
+        }
+        return Math.max(0, Math.min(255, parseFloat(part)));
+      };
+      const r = toByte(parts[0]);
+      const g = toByte(parts[1]);
+      const b = toByte(parts[2]);
+      const toHex = (num) => Math.round(num).toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+  }
+  return fallback;
+}
+
+function resolveCssVarHex(varName, fallback) {
+  const resolved = resolveCssVarColor(varName, fallback);
+  return normalizeHexColor(resolved, normalizeHexColor(fallback, fallback));
+}
+
+function getTerminalSearchDecorations() {
+  const matchHighlight = resolveCssVarHex('--kt-color-terminal-ansi-bright-yellow', '#f9f1a5');
+  return {
+    matchBackground: matchHighlight,
+    matchOverviewRuler: matchHighlight,
+    activeMatchBackground: matchHighlight,
+    activeMatchColorOverviewRuler: matchHighlight,
+  };
+}
+
 function getTerminalThemeFromCss() {
   return {
     background: resolveCssVarColor('--kt-color-terminal-bg', TERMINAL_THEME_FALLBACK.background),
@@ -66,6 +115,10 @@ function getTerminalThemeFromCss() {
     cursor: resolveCssVarColor('--kt-color-terminal-cursor', TERMINAL_THEME_FALLBACK.cursor),
     cursorAccent: resolveCssVarColor('--kt-color-terminal-cursor-accent', TERMINAL_THEME_FALLBACK.cursorAccent),
     selectionBackground: resolveCssVarColor('--kt-color-terminal-selection', TERMINAL_THEME_FALLBACK.selectionBackground),
+    selectionInactiveBackground: resolveCssVarColor(
+      '--kt-color-terminal-selection-inactive',
+      TERMINAL_THEME_FALLBACK.selectionBackground
+    ),
     black: resolveCssVarColor('--kt-color-terminal-ansi-black', TERMINAL_THEME_FALLBACK.black),
     red: resolveCssVarColor('--kt-color-terminal-ansi-red', TERMINAL_THEME_FALLBACK.red),
     green: resolveCssVarColor('--kt-color-terminal-ansi-green', TERMINAL_THEME_FALLBACK.green),
@@ -1900,6 +1953,7 @@ class TerminalManager {
       caseSensitive: false,
       regex: false,
       wholeWord: false,
+      decorations: getTerminalSearchDecorations(),
     });
   }
 
@@ -1909,6 +1963,7 @@ class TerminalManager {
       caseSensitive: false,
       regex: false,
       wholeWord: false,
+      decorations: getTerminalSearchDecorations(),
     });
   }
 

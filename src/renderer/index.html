@@ -41,41 +41,76 @@
 
   <!-- メインコンテナ -->
   <div class="container" id="main-container">
+    <div class="left-topbar" id="left-topbar">
+      <div class="activity-bar-top" aria-hidden="true"></div>
+      <div class="left-pane-top" aria-hidden="true"></div>
+    </div>
+
+    <!-- カスタムタイトルバー（タブ統合） -->
+    <div class="titlebar" id="titlebar">
+      <div class="titlebar-tabs-wrapper">
+        <button class="tab-scroll-btn tab-scroll-left" id="tab-scroll-left" title="Scroll tabs left">
+          <svg viewBox="0 0 12 12"><path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="titlebar-tabs" id="terminal-tabs">
+          <!-- タブはJSで動的に追加 -->
+          <button class="terminal-tab-add" id="terminal-tab-add" title="New Tab">+</button>
+          <button class="terminal-tab-add-menu" id="terminal-tab-add-menu" title="New Tab Options" aria-label="New Tab Options">
+            <svg viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <button class="tab-scroll-btn tab-scroll-right" id="tab-scroll-right" title="Scroll tabs right">
+          <svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="terminal-tabs-actions" id="terminal-tabs-actions">
+        </div>
+      </div>
+      <div class="titlebar-drag" id="titlebar-drag"></div>
+      <div class="titlebar-buttons">
+        <button class="titlebar-button minimize" id="btn-minimize">&#x2212;</button>
+        <button class="titlebar-button maximize" id="btn-maximize">&#x25A1;</button>
+        <button class="titlebar-button close" id="btn-close">&#x2715;</button>
+      </div>
+    </div>
+
     <!-- Left activity bar + pane -->
     <div class="left-shell" id="left-shell">
-      <div class="left-shell-drag" aria-hidden="true"></div>
       <div class="activity-bar" id="activity-bar">
-        <button class="activity-item" data-pane="active" title="Active Agents">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M12 3l9 4.5-9 4.5-9-4.5 9-4.5z" fill="none" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M3 12l9 4.5 9-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M3 16.5l9 4.5 9-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <button class="activity-item active" data-pane="history" title="History">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M12 6a6 6 0 1 1-4.24 1.76" fill="none" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M8 4v3h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <button class="activity-item" data-pane="search" title="Search">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M16.2 16.2L20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <button class="activity-item" data-pane="pins" title="Pins">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6l1 1 1-1v-6h5v-2l-2-2z" fill="currentColor"/>
-          </svg>
-        </button>
-        <div class="activity-spacer"></div>
-        <button class="activity-item activity-settings" data-action="settings" title="Settings">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z" fill="currentColor"/>
-          </svg>
-        </button>
+        <div class="activity-bar-body">
+          <button class="activity-item" data-pane="active" title="Active Agents">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M12 3l9 4.5-9 4.5-9-4.5 9-4.5z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M3 12l9 4.5 9-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M3 16.5l9 4.5 9-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="activity-item active" data-pane="history" title="History">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M12 6a6 6 0 1 1-4.24 1.76" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M8 4v3h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="activity-item" data-pane="search" title="Search">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M16.2 16.2L20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="activity-item" data-pane="pins" title="Pins">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6l1 1 1-1v-6h5v-2l-2-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <div class="activity-spacer"></div>
+          <button class="activity-item activity-settings" data-action="settings" title="Settings">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="left-pane" id="left-pane" aria-hidden="false">
         <div class="left-pane-panel left-pane-active" data-pane="active" id="left-pane-active">
@@ -141,44 +176,47 @@
 
     <!-- ターミナル -->
     <div class="terminal-panel">
-      <!-- カスタムタイトルバー（タブ統合） -->
-      <div class="titlebar" id="titlebar">
-        <div class="titlebar-tabs-wrapper">
-          <button class="tab-scroll-btn tab-scroll-left" id="tab-scroll-left" title="Scroll tabs left">
-            <svg viewBox="0 0 12 12"><path d="M8 2L4 6l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <div class="titlebar-tabs" id="terminal-tabs">
-            <!-- タブはJSで動的に追加 -->
-            <button class="terminal-tab-add" id="terminal-tab-add" title="New Tab">+</button>
-            <button class="terminal-tab-add-menu" id="terminal-tab-add-menu" title="New Tab Options" aria-label="New Tab Options">
-              <svg viewBox="0 0 12 12" aria-hidden="true">
-                <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-          <button class="tab-scroll-btn tab-scroll-right" id="tab-scroll-right" title="Scroll tabs right">
-            <svg viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <div class="terminal-tabs-actions" id="terminal-tabs-actions">
-          </div>
+      <div class="terminal-stack" id="terminal-stack"></div>
+      <div class="terminal-drop-overlay" id="terminal-drop-overlay">Drop files to paste path</div>
+      <div class="terminal-search" id="terminal-search" role="search">
+        <div class="terminal-search-input">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M16.2 16.2L20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            id="terminal-search-input"
+            placeholder="Search in terminal"
+            autocomplete="off"
+            spellcheck="false"
+          />
         </div>
-        <div class="titlebar-drag" id="titlebar-drag"></div>
-        <div class="titlebar-buttons">
-          <button class="titlebar-button minimize" id="btn-minimize">&#x2212;</button>
-          <button class="titlebar-button maximize" id="btn-maximize">&#x25A1;</button>
-          <button class="titlebar-button close" id="btn-close">&#x2715;</button>
+        <div class="terminal-search-actions" role="group" aria-label="Search navigation">
+          <div class="terminal-search-status" id="terminal-search-status" aria-live="polite">
+            <span class="terminal-search-status-current" id="terminal-search-status-current">0</span>
+            <span class="terminal-search-status-sep">/</span>
+            <span class="terminal-search-status-total" id="terminal-search-status-total">0</span>
+          </div>
+          <button class="terminal-search-btn" id="terminal-search-prev" title="Previous" aria-label="Previous result">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path d="M7 14l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="terminal-search-btn" id="terminal-search-next" title="Next" aria-label="Next result">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="terminal-search-btn close" id="terminal-search-close" title="Close" aria-label="Close search">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path d="M8 8l8 8M16 8l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
-      <div class="terminal-stack" id="terminal-stack"></div>
-	      <div class="terminal-drop-overlay" id="terminal-drop-overlay">Drop files to paste path</div>
-	      <div class="terminal-search" id="terminal-search">
-	        <input type="text" id="terminal-search-input" placeholder="Search in terminal (Enter/Shift+Enter)" />
-	        <button class="terminal-search-btn" id="terminal-search-prev" title="Previous">&#x25B2;</button>
-	        <button class="terminal-search-btn" id="terminal-search-next" title="Next">&#x25BC;</button>
-	        <button class="terminal-search-btn close" id="terminal-search-close" title="Close">&#x2715;</button>
-	      </div>
-			    </div>
-			  </div>
+    </div>
+  </div>
 
   <!-- ステータスバー（アバター＋応援メッセージ） -->
   <div class="status-bar" id="status-bar">

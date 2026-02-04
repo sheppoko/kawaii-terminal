@@ -129,6 +129,9 @@
     const searchPrev = document.getElementById('terminal-search-prev');
     const searchNext = document.getElementById('terminal-search-next');
     const searchClose = document.getElementById('terminal-search-close');
+    const searchStatus = document.getElementById('terminal-search-status');
+    const searchStatusCurrent = document.getElementById('terminal-search-status-current');
+    const searchStatusTotal = document.getElementById('terminal-search-status-total');
 
     const activeTerminal = getActiveTerminal();
     if (activeTerminal && !activeTerminal.searchAddon) {
@@ -144,33 +147,115 @@
       };
     }
 
+    let isComposing = false;
+    let lastSearchTerminal = null;
+    let resultsTerminal = null;
+    let searchResultsDisposable = null;
+
+    const setSearchStatus = (current, total) => {
+      if (!searchStatus) return;
+      const safeTotal = Number.isFinite(total) ? total : 0;
+      const safeCurrent = Number.isFinite(current) ? current : 0;
+      if (searchStatusCurrent && searchStatusTotal) {
+        searchStatusCurrent.textContent = String(safeCurrent);
+        searchStatusTotal.textContent = String(safeTotal);
+      } else {
+        searchStatus.textContent = `${safeCurrent}/${safeTotal}`;
+      }
+    };
+
+    const resetSearchStatus = () => {
+      setSearchStatus(0, 0);
+    };
+
+    const detachSearchResults = () => {
+      if (searchResultsDisposable && typeof searchResultsDisposable.dispose === 'function') {
+        searchResultsDisposable.dispose();
+      }
+      searchResultsDisposable = null;
+      resultsTerminal = null;
+    };
+
+    const attachSearchResults = (terminal) => {
+      if (!terminal || terminal === resultsTerminal) return;
+      detachSearchResults();
+      resultsTerminal = terminal;
+      const addon = terminal.searchAddon;
+      if (addon?.onDidChangeResults) {
+        searchResultsDisposable = addon.onDidChangeResults((event) => {
+          const total = Number(event?.resultCount) || 0;
+          const rawIndex = Number(event?.resultIndex);
+          const current = Number.isFinite(rawIndex) && rawIndex >= 0 ? rawIndex + 1 : 0;
+          setSearchStatus(current, total);
+        });
+      } else {
+        resetSearchStatus();
+      }
+    };
+
+    const clearSearchHighlights = (terminal) => {
+      terminal?.searchAddon?.clearDecorations?.();
+      terminal?.clearSelection?.();
+      resetSearchStatus();
+    };
+
+    const runSearch = (direction) => {
+      const term = searchInput.value.trim();
+      const terminal = getActiveTerminal();
+      if (!terminal) return;
+      attachSearchResults(terminal);
+      lastSearchTerminal = terminal;
+      if (!term) {
+        clearSearchHighlights(terminal);
+        return;
+      }
+      if (direction === 'prev') {
+        terminal.findPrevious(term);
+      } else {
+        terminal.findNext(term);
+      }
+    };
+
     const show = () => {
       searchPanel.classList.add('show');
+      document.documentElement.classList.add('terminal-searching');
+      window.KawaiiTerminalTheme?.refresh?.();
+      attachSearchResults(getActiveTerminal());
       searchInput.focus();
       searchInput.select();
     };
 
     const hide = () => {
       searchPanel.classList.remove('show');
-      const terminal = getActiveTerminal();
-      terminal?.focus();
+      document.documentElement.classList.remove('terminal-searching');
+      window.KawaiiTerminalTheme?.refresh?.();
+      clearSearchHighlights(lastSearchTerminal || getActiveTerminal());
+      detachSearchResults();
+      lastSearchTerminal = null;
+      getActiveTerminal()?.focus?.();
     };
 
     const doSearchNext = () => {
-      const term = searchInput.value.trim();
-      const terminal = getActiveTerminal();
-      if (term && terminal) {
-        terminal.findNext(term);
-      }
+      runSearch('next');
     };
 
     const doSearchPrev = () => {
-      const term = searchInput.value.trim();
-      const terminal = getActiveTerminal();
-      if (term && terminal) {
-        terminal.findPrevious(term);
-      }
+      runSearch('prev');
     };
+
+    searchInput.addEventListener('compositionstart', () => {
+      isComposing = true;
+    });
+
+    searchInput.addEventListener('compositionend', () => {
+      isComposing = false;
+      runSearch('next');
+    });
+
+    searchInput.addEventListener('input', () => {
+      if (isComposing) return;
+      runSearch('next');
+    });
 
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {

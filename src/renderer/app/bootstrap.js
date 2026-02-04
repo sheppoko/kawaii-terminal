@@ -752,7 +752,6 @@
       });
 
       window.addEventListener('resize', () => {
-        window.WindowUI?.syncTitlebarOffsets?.();
         getActiveTerminal()?.handleResize();
         focusActiveTerminalSafely(120);
       });
@@ -782,6 +781,7 @@
         const writeClipboardText = window.ClipboardUtils?.writeText || (async () => false);
         dispatchAction = window.ActionDispatcher?.createActionDispatcher?.({
           getActiveTerminal,
+          searchUI,
           tabManager,
           pinManager,
           getShortcutSheet: () => shortcutSheet,
