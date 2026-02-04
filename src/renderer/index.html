@@ -178,11 +178,42 @@
     <div class="terminal-panel">
       <div class="terminal-stack" id="terminal-stack"></div>
       <div class="terminal-drop-overlay" id="terminal-drop-overlay">Drop files to paste path</div>
-      <div class="terminal-search" id="terminal-search">
-        <input type="text" id="terminal-search-input" placeholder="Search in terminal (Enter/Shift+Enter)" />
-        <button class="terminal-search-btn" id="terminal-search-prev" title="Previous">&#x25B2;</button>
-        <button class="terminal-search-btn" id="terminal-search-next" title="Next">&#x25BC;</button>
-        <button class="terminal-search-btn close" id="terminal-search-close" title="Close">&#x2715;</button>
+      <div class="terminal-search" id="terminal-search" role="search">
+        <div class="terminal-search-input">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M16.2 16.2L20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            id="terminal-search-input"
+            placeholder="Search in terminal"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="terminal-search-actions" role="group" aria-label="Search navigation">
+          <div class="terminal-search-status" id="terminal-search-status" aria-live="polite">
+            <span class="terminal-search-status-current" id="terminal-search-status-current">0</span>
+            <span class="terminal-search-status-sep">/</span>
+            <span class="terminal-search-status-total" id="terminal-search-status-total">0</span>
+          </div>
+          <button class="terminal-search-btn" id="terminal-search-prev" title="Previous" aria-label="Previous result">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path d="M7 14l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="terminal-search-btn" id="terminal-search-next" title="Next" aria-label="Next result">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="terminal-search-btn close" id="terminal-search-close" title="Close" aria-label="Close search">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path d="M8 8l8 8M16 8l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>

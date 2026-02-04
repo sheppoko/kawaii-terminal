@@ -129,6 +129,7 @@
   --kt-color-terminal-cursor: #ffffff;
   --kt-color-terminal-cursor-accent: #000000;
   --kt-color-terminal-selection: rgba(255, 255, 255, 0.3);
+  --kt-color-terminal-selection-inactive: rgba(255, 255, 255, 0.3);
   --kt-color-terminal-ansi-black: #000000;
   --kt-color-terminal-ansi-red: #c50f1f;
   --kt-color-terminal-ansi-green: #13a10e;
@@ -372,6 +373,10 @@ html, body {
   background-color: var(--kt-color-bg-canvas);
   font-family: var(--kt-type-ui-fontFamily);
   color: var(--kt-color-text-primary);
+}
+
+:root.terminal-searching {
+  --kt-color-terminal-selection-inactive: var(--kt-color-terminal-ansi-yellow);
 }
 
 /* カスタムスクロールバー */
@@ -2537,37 +2542,93 @@ body.pane-resizing .terminal-pane-resizer {
 
 /* ターミナル検索バー */
 .terminal-search {
+  --terminal-search-bg: var(--kt-color-component-popover-bg);
+  --terminal-search-border: var(--kt-color-border-default);
+  --terminal-search-input-bg: var(--kt-color-component-session-card-bg);
+  --terminal-search-input-border: var(--kt-color-component-session-pane-border-subtle);
+  --terminal-search-text: var(--kt-color-text-primary);
+  --terminal-search-icon: var(--kt-color-text-secondary);
+  --terminal-search-placeholder: var(--kt-color-text-secondary);
   position: absolute;
-  top: calc(var(--terminal-stack-offset) + 4px);
+  top: calc(var(--terminal-stack-offset) + 6px);
   right: 12px;
   display: none;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
-  background: var(--kt-color-component-popover-bg);
-  border: 1px solid var(--kt-color-border-default);
-  border-radius: 8px;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--terminal-search-bg);
+  border: 1px solid var(--terminal-search-border);
+  border-radius: 10px;
   z-index: 50;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
 }
 
 .terminal-search.show {
   display: flex;
+  --terminal-search-bg: var(--kt-color-component-session-pane-bg-strong);
+  --terminal-search-border: var(--kt-color-component-session-pane-divider-strong);
+  --terminal-search-input-bg: var(--kt-color-component-session-pane-active);
+  --terminal-search-input-border: var(--kt-color-component-session-pane-divider-strong);
+  --terminal-search-text: var(--kt-color-text-emphasis);
+  --terminal-search-icon: var(--kt-color-text-emphasis);
+}
+
+.terminal-search-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--terminal-search-input-bg);
+  border: 1px solid var(--terminal-search-input-border);
+  color: var(--terminal-search-text);
+}
+
+.terminal-search-input svg {
+  color: var(--terminal-search-icon);
+  flex-shrink: 0;
 }
 
 #terminal-search-input {
-  width: 220px;
-  padding: 6px 8px;
-  background: var(--kt-color-bg-surface);
-  border: 1px solid var(--kt-color-border-default);
-  border-radius: 6px;
-  color: var(--kt-color-text-primary);
+  width: 240px;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--terminal-search-text);
   font-size: 12px;
+  font-family: inherit;
 }
 
-#terminal-search-input:focus {
-  outline: none;
-  border-color: var(--kt-color-text-secondary);
+#terminal-search-input::placeholder {
+  color: var(--terminal-search-placeholder);
+  opacity: 0.6;
+}
+
+.terminal-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.terminal-search-status {
+  min-width: 42px;
+  padding-right: 2px;
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.terminal-search-status-current {
+  color: var(--terminal-search-text);
+}
+
+.terminal-search-status-sep,
+.terminal-search-status-total {
+  color: var(--terminal-search-placeholder);
 }
 
 /* Preview panel toast */
@@ -2610,20 +2671,29 @@ body.pane-resizing .terminal-pane-resizer {
 .terminal-search-btn {
   width: 26px;
   height: 26px;
-  border: none;
-  background: var(--kt-color-bg-elevated);
-  color: var(--kt-color-text-primary);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--kt-color-text-secondary);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
-  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
 .terminal-search-btn:hover {
-  background: var(--kt-color-bg-surface);
+  background: var(--kt-color-component-button-ghost-hover-bg);
+  color: var(--kt-color-text-primary);
 }
 
 .terminal-search-btn.close {
+  color: var(--kt-color-text-secondary);
+}
+
+.terminal-search-btn.close:hover {
+  background: var(--kt-color-component-button-danger-bg);
+  border-color: var(--kt-color-component-button-danger-border);
   color: var(--kt-color-component-button-danger-text);
 }
 

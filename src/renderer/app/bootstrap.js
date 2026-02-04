@@ -781,6 +781,7 @@
         const writeClipboardText = window.ClipboardUtils?.writeText || (async () => false);
         dispatchAction = window.ActionDispatcher?.createActionDispatcher?.({
           getActiveTerminal,
+          searchUI,
           tabManager,
           pinManager,
           getShortcutSheet: () => shortcutSheet,
