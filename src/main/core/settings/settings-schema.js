@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
     language: 'en',
     languageSource: 'auto',
     minInterval: 1800,
+    avatarType: 'default',
   },
   terminal: {
     fontSize: 14,
@@ -61,6 +62,8 @@ const deepMerge = (target, source) => {
   });
   return target;
 };
+
+const normalizeAvatarType = (value) => (value === 'dolph' ? 'dolph' : 'default');
 
 function normalizeSettings(raw) {
   const base = deepClone(DEFAULT_SETTINGS);
@@ -119,6 +122,11 @@ function normalizeSettings(raw) {
   }
   if (!Number.isFinite(merged.cheer.minInterval)) {
     merged.cheer.minInterval = DEFAULT_SETTINGS.cheer.minInterval;
+  }
+  if (typeof merged.cheer.avatarType !== 'string') {
+    merged.cheer.avatarType = DEFAULT_SETTINGS.cheer.avatarType;
+  } else {
+    merged.cheer.avatarType = normalizeAvatarType(merged.cheer.avatarType);
   }
   if (!isPlainObject(merged.terminal)) {
     merged.terminal = deepClone(DEFAULT_SETTINGS.terminal);

@@ -614,6 +614,7 @@
     const enabledCheckbox = document.getElementById('cheer-enabled');
     const languageSelect = document.getElementById('cheer-language');
     const intervalInput = document.getElementById('cheer-interval');
+    const avatarSelect = document.getElementById('cheer-avatar');
     const intervalMin = intervalInput ? parseFloat(intervalInput.min || '1') : 1;
     const intervalMax = intervalInput ? parseFloat(intervalInput.max || '60') : 60;
 
@@ -635,15 +636,20 @@
       window.kawaiiDebugLog('[CheerUI] Elements:', {
         enabledCheckbox: !!enabledCheckbox,
         languageSelect: !!languageSelect,
-        intervalInput: !!intervalInput
+        intervalInput: !!intervalInput,
+        avatarSelect: !!avatarSelect
       });
       enabledCheckbox.checked = settings.enabled;
       languageSelect.value = settings.language;
       syncIntervalInput(secondsToMinutes(settings.minInterval, intervalMin));
+      if (avatarSelect) {
+        avatarSelect.value = settings.avatarType || 'default';
+      }
       window.kawaiiDebugLog('[CheerUI] After update:', {
         checked: enabledCheckbox.checked,
         language: languageSelect.value,
-        interval: intervalInput?.value
+        interval: intervalInput?.value,
+        avatar: avatarSelect?.value
       });
     };
 
@@ -716,6 +722,13 @@
     languageSelect.addEventListener('change', () => {
       cheerManager.updateSettings({ language: languageSelect.value });
     });
+
+    // アバター選択
+    if (avatarSelect) {
+      avatarSelect.addEventListener('change', () => {
+        cheerManager.updateSettings({ avatarType: avatarSelect.value });
+      });
+    }
 
     // インターバル入力
     if (intervalInput) {
