@@ -411,6 +411,8 @@ html, body {
   flex-shrink: 0;
   grid-column: 3;
   grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Windows最大化/全画面時: タブを上端まで使えるようにする */
