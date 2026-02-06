@@ -1,5 +1,5 @@
 (() => {
-  const DISMISS_VERSION = 1;
+  const DISMISS_VERSION = 2;
 
   const statusLabels = {
     present: 'Detected',
