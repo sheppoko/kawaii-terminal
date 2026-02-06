@@ -447,6 +447,7 @@ class AutoConfigService {
       UserPromptSubmit: `${base} --source claude --event working --hook UserPromptSubmit`,
       PermissionRequest: `${base} --source claude --event waiting_user --hook PermissionRequest`,
       Notification: `${base} --source claude --event auto --hook Notification`,
+      PostToolUse: `${base} --source claude --event working --hook PostToolUse`,
       Stop: `${base} --source claude --event completed --hook Stop`,
       SessionEnd: `${base} --source claude --event stopped --hook SessionEnd`,
     };

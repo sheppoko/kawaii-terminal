@@ -13,6 +13,7 @@ const REQUIRED_HOOK_EVENTS = [
   'UserPromptSubmit',
   'PermissionRequest',
   'Notification',
+  'PostToolUse',
   'Stop',
   'SessionEnd',
 ];
