@@ -119,7 +119,9 @@ function resolveCodexCwdFromEntries(entries) {
 
 function inferCodexStatusHint(entries) {
   let sawUser = false;
-  let assistantAfterUser = false;
+  let sawAssistantAfterUser = false;
+  let sawAssistantWithPhaseAfterUser = false;
+  let sawFinalAnswerAfterUser = false;
   let sawTurnAborted = false;
   let lastHintTs = 0;
 
@@ -182,16 +184,27 @@ function inferCodexStatusHint(entries) {
     noteTimestamp(entry);
   };
 
-  const markMessage = (role, entry) => {
+  const markMessage = (role, entry, { phase = '' } = {}) => {
     if (role === 'user') {
       sawUser = true;
-      assistantAfterUser = false;
+      sawAssistantAfterUser = false;
+      sawAssistantWithPhaseAfterUser = false;
+      sawFinalAnswerAfterUser = false;
       sawTurnAborted = false;
       noteTimestamp(entry);
       return;
     }
     if (role === 'assistant') {
-      if (sawUser) assistantAfterUser = true;
+      if (sawUser) {
+        sawAssistantAfterUser = true;
+        const normalizedPhase = String(phase || '').trim().toLowerCase();
+        if (normalizedPhase) {
+          sawAssistantWithPhaseAfterUser = true;
+          if (normalizedPhase === 'final_answer' || normalizedPhase === 'final') {
+            sawFinalAnswerAfterUser = true;
+          }
+        }
+      }
       noteTimestamp(entry);
     }
   };
@@ -224,7 +237,8 @@ function inferCodexStatusHint(entries) {
       if (role === 'user' && shouldSkipCodexUserMessage(content)) continue;
       const text = extractCodexContentText(content, role);
       if (!text) continue;
-      markMessage(role, entry);
+      const phase = payload.phase ?? payload.message_phase ?? payload.messagePhase ?? '';
+      markMessage(role, entry, { phase });
       continue;
     }
 
@@ -259,9 +273,19 @@ function inferCodexStatusHint(entries) {
     status = 'completed';
   } else if (sawUser && hasPendingRequest()) {
     status = 'waiting_user';
-  } else if (sawUser && assistantAfterUser && !hasPendingTools()) {
-    status = 'completed';
-  } else if (sawUser && (!assistantAfterUser || hasPendingTools())) {
+  } else if (sawUser && hasPendingTools()) {
+    status = 'working';
+  } else if (sawUser && sawAssistantAfterUser) {
+    // Newer sessions emit message phases (`commentary` / `final_answer`).
+    // Treat commentary-only assistant output as still working.
+    if (!sawAssistantWithPhaseAfterUser) {
+      status = 'completed';
+    } else if (sawFinalAnswerAfterUser) {
+      status = 'completed';
+    } else {
+      status = 'working';
+    }
+  } else if (sawUser) {
     status = 'working';
   }
 
