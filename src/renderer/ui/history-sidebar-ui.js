@@ -1585,6 +1585,38 @@
       this.patchSidebarSessionItems(body, group.sessions);
     }
 
+    getActiveTabId() {
+      return String(this.tracker?.activeTabId || '').trim();
+    }
+
+    getActivePaneId() {
+      return String(this.tracker?.getActivePaneId?.() || this.tracker?.activePaneId || '').trim();
+    }
+
+    extractTabIdFromPaneId(paneId) {
+      const raw = String(paneId || '').trim();
+      if (!raw.startsWith('pane-')) return '';
+      const body = raw.slice(5);
+      const match = body.match(/^(tab-.+)-(\d+)$/);
+      return match ? match[1] : '';
+    }
+
+    isSessionInCurrentTab(paneId) {
+      const safePaneId = String(paneId || '').trim();
+      if (!safePaneId) return false;
+
+      const activeTabId = this.getActiveTabId();
+      if (activeTabId) {
+        const ownerTabId = this.extractTabIdFromPaneId(safePaneId);
+        if (ownerTabId) {
+          return ownerTabId === activeTabId;
+        }
+      }
+
+      const activePaneId = this.getActivePaneId();
+      return Boolean(activePaneId && safePaneId === activePaneId);
+    }
+
     getSidebarSessionItemFields(block) {
       const sessionId = String(block?.session_id || '').trim();
       const source = String(block?.source || this.historySource || '').trim().toLowerCase();
@@ -1611,8 +1643,8 @@
       const status = statusEntry?.status || '';
       const statusUpdatedAt = Number(statusEntry?.updated_at) || 0;
       const isDefaultCompleted = Boolean(statusEntry?.flags?.defaultCompleted);
-      const paneId = String(statusEntry?.pane_id || '').trim();
-      const activePaneId = this.tracker?.getActivePaneId?.() || this.tracker?.activePaneId || '';
+      const paneId = String(statusEntry?.pane_id || block?.pane_id || '').trim();
+      const activePaneId = this.getActivePaneId();
       if (paneId && activePaneId && paneId === activePaneId) {
         this.markSessionViewed(sessionKey);
       }
@@ -1620,11 +1652,13 @@
       const completedAt = status === 'completed' && !isDefaultCompleted ? statusUpdatedAt : 0;
       const statusUnread = Boolean(completedAt && completedAt > viewedAt);
       const statusDisplay = Boolean(statusEntry?.display);
+      const isCurrentTab = this.isSessionInCurrentTab(paneId);
       return {
         sessionId,
         source,
         sessionKey,
         blockId,
+        paneId,
         inputText,
         outputText,
         summaryText,
@@ -1638,6 +1672,7 @@
         statusUpdatedAt,
         statusUnread,
         statusDisplay,
+        isCurrentTab,
         tooltip: tooltipLines.join('\n'),
       };
     }
@@ -1652,9 +1687,11 @@
         fields.outputText || '',
         fields.summaryText || '',
         fields.source || '',
+        fields.paneId || '',
         fields.status || '',
         fields.statusDisplay ? '1' : '0',
         fields.statusUnread ? '1' : '0',
+        fields.isCurrentTab ? '1' : '0',
         fields.cwd || '',
         fields.wslDistro || '',
         fields.tooltip || '',
@@ -1731,10 +1768,12 @@
       item.dataset.source = fields.source;
       item.dataset.sessionKey = fields.sessionKey;
       item.dataset.blockId = fields.blockId;
+      item.dataset.paneId = fields.paneId || '';
       item.dataset.cwd = fields.cwd || '';
       item.dataset.wslDistro = fields.wslDistro || '';
       item.dataset.timestamp = String(fields.timestamp || '');
       item.dataset.signature = signature;
+      item.classList.toggle('is-current-tab', this.isActiveSessionItem(item) && fields.isCurrentTab);
 
       const inputEl = item.querySelector('.session-item-input');
       if (inputEl) {
@@ -2033,10 +2072,12 @@
       item.dataset.source = fields.source;
       item.dataset.sessionKey = fields.sessionKey;
       item.dataset.blockId = fields.blockId;
+      item.dataset.paneId = fields.paneId || '';
       item.dataset.cwd = fields.cwd || '';
       item.dataset.wslDistro = fields.wslDistro || '';
       item.dataset.timestamp = String(fields.timestamp || '');
       item.dataset.signature = this.getSidebarSessionItemSignature(fields);
+      item.classList.toggle('is-current-tab', scope === 'active' && fields.isCurrentTab);
 
       const header = document.createElement('div');
       header.className = 'session-item-header';

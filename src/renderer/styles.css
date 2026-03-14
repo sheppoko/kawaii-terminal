@@ -6386,6 +6386,27 @@ body.pane-dragging * {
   background: var(--kt-color-alpha-white-04);
 }
 
+.session-section-active .session-item.is-current-tab {
+  background: var(--kt-color-component-session-pane-item-active);
+}
+
+.session-section-active .session-item.is-current-tab::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--kt-color-accent-primary);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.session-section-active .session-item.is-current-tab:hover {
+  background: var(--kt-color-component-session-pane-item-active);
+}
+
 .session-item.active {
   background: transparent;
 }
@@ -6834,6 +6855,11 @@ body.pane-dragging * {
 }
 
 #left-shell .session-item-input {
+  font-size: calc(12px * var(--left-pane-font-scale));
+}
+
+#left-shell .session-item-summary {
+  margin: calc(4px * var(--left-pane-font-scale)) calc(8px * var(--left-pane-font-scale)) calc(4px * var(--left-pane-font-scale)) calc(32px * var(--left-pane-font-scale));
   font-size: calc(12px * var(--left-pane-font-scale));
 }
 
