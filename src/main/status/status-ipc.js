@@ -3,9 +3,9 @@ const { BrowserWindow } = require('electron');
 function extractTabIdFromPaneId(paneId) {
   const raw = String(paneId || '').trim();
   if (!raw.startsWith('pane-')) return '';
-  const lastDash = raw.lastIndexOf('-');
-  if (lastDash <= 5) return '';
-  return raw.slice(5, lastDash);
+  const body = raw.slice(5);
+  const match = body.match(/^(tab-.+)-(\d+)$/);
+  return match ? match[1] : '';
 }
 
 function broadcastToAllWindows(channel, payload) {

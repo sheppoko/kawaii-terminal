@@ -1601,13 +1601,23 @@
       return match ? match[1] : '';
     }
 
+    getPaneTabId(paneId) {
+      const safePaneId = String(paneId || '').trim();
+      if (!safePaneId) return '';
+      const trackedTabId = String(this.tracker?.getPaneTabId?.(safePaneId) || '').trim();
+      if (trackedTabId) {
+        return trackedTabId;
+      }
+      return this.extractTabIdFromPaneId(safePaneId);
+    }
+
     isSessionInCurrentTab(paneId) {
       const safePaneId = String(paneId || '').trim();
       if (!safePaneId) return false;
 
       const activeTabId = this.getActiveTabId();
       if (activeTabId) {
-        const ownerTabId = this.extractTabIdFromPaneId(safePaneId);
+        const ownerTabId = this.getPaneTabId(safePaneId);
         if (ownerTabId) {
           return ownerTabId === activeTabId;
         }

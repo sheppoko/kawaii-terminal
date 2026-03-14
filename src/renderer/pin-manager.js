@@ -665,9 +665,17 @@
           marker: null,
           lastCommand: null,
           pane: null,
+          tabId: '',
         });
       }
       return this.paneSessions.get(paneId);
+    }
+
+    bindPaneToTab(paneId, tabId) {
+      const pid = String(paneId || '').trim();
+      if (!pid) return;
+      const session = this.ensurePaneSession(pid);
+      session.tabId = String(tabId || '').trim();
     }
 
     setActiveTab(tabId) {
@@ -680,20 +688,25 @@
       if (paneId) {
         this.ensurePaneSession(paneId);
         const session = this.paneSessions.get(paneId);
-        if (session && pane) {
-          session.pane = pane;
+        if (session) {
+          if (pane) {
+            session.pane = pane;
+          }
+          if (pane?.tabId) {
+            session.tabId = String(pane.tabId).trim();
+          } else if (this.activeTabId) {
+            session.tabId = this.activeTabId;
+          }
         }
       }
     }
 
-    removeTab(tabId) {
-      // When a tab is removed, remove all pane sessions belonging to that tab
-      const toRemove = [];
-      for (const [paneId] of this.paneSessions) {
-        if (paneId.includes(tabId)) {
-          toRemove.push(paneId);
-        }
-      }
+    removeTab(tabId, paneIds) {
+      const toRemove = Array.isArray(paneIds) && paneIds.length > 0
+        ? paneIds
+        : Array.from(this.paneSessions.entries())
+          .filter(([, session]) => String(session?.tabId || '').trim() === String(tabId || '').trim())
+          .map(([paneId]) => paneId);
       for (const paneId of toRemove) {
         this.removePane(paneId);
       }

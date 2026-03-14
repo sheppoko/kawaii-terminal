@@ -1989,6 +1989,8 @@ async function initTerminalTabs(cheerManager, pinManager, historyManager, imageP
         mdPreviewDisposable: null,
         profileId: profileId || null,
       };
+    pinManager?.bindPaneToTab?.(paneId, tab.tabId);
+    historyManager?.bindPaneToTab?.(paneId, tab.tabId);
     historyManager?.updatePaneLabel?.(paneId, titleEl.textContent || 'Terminal');
 
     // 閉じるボタンのイベント
@@ -2392,7 +2394,7 @@ async function initTerminalTabs(cheerManager, pinManager, historyManager, imageP
     const tabEl = tab.tabEl;
     tabEl.classList.add('closing');
     tabs.delete(tabId);
-    pinManager?.removeTab?.(tabId);
+    pinManager?.removeTab?.(tabId, Array.from(tab.panes.keys()));
 
     // アクティブタブの切り替えを先に行う
     if (activeTabId === tabId && nextId) {

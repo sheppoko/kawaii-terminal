@@ -276,6 +276,10 @@
       }
     }
 
+    bindPaneToTab(paneId, tabId) {
+      this.tracker?.bindPaneToTab?.(paneId, tabId);
+    }
+
     updatePaneLabel(paneId, label) {
       this.tracker?.updatePaneLabel?.(paneId, label);
       if (this.isPanelActive()) {

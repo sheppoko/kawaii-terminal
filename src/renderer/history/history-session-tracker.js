@@ -146,6 +146,21 @@
       return { ...best, pane_id: pid, status, stalled: false, display: true };
     }
 
+    bindPaneToTab(paneId, tabId) {
+      const pid = String(paneId || '').trim();
+      const tid = String(tabId || '').trim();
+      if (!pid) return;
+      const state = this.ensurePaneState(pid);
+      state.tabId = tid;
+    }
+
+    getPaneTabId(paneId) {
+      const pid = String(paneId || '').trim();
+      if (!pid) return '';
+      const state = this.panes.get(pid);
+      return typeof state?.tabId === 'string' ? state.tabId : '';
+    }
+
     getBoundSessionKeySet() {
       const bound = new Set();
       const entries = this.statusProvider?.entries;
@@ -226,6 +241,7 @@
               lastCodexCommandAt: 0,
               cwdEventCount: 0,
               cwd: '',
+              tabId: '',
               sessionTag: '',
               sessionLabel: '',
             };
@@ -249,6 +265,9 @@
       this.activePane = pane || null;
       if (paneId) {
         const state = this.ensurePaneState(paneId);
+        if (this.activeTabId) {
+          state.tabId = this.activeTabId;
+        }
         if (pane?.titleEl?.textContent) {
           state.paneLabel = pane.titleEl.textContent;
         }
@@ -312,11 +331,15 @@
       if (state.outputIdle === next) return;
       state.outputIdle = next;
       if (window.statusAPI?.sendOutput) {
-        window.statusAPI.sendOutput({
+        const payload = {
           pane_id: paneId,
           idle: next,
           timestamp: Date.now(),
-        });
+        };
+        if (state.tabId) {
+          payload.tab_id = state.tabId;
+        }
+        window.statusAPI.sendOutput(payload);
       }
       if (this.onRender) {
         this.onRender();
@@ -457,11 +480,22 @@
     }
 
     handleTabClose(tabId, paneIds) {
-      if (Array.isArray(paneIds)) {
+      if (Array.isArray(paneIds) && paneIds.length > 0) {
         for (const paneId of paneIds) {
-          if (paneId && String(paneId).includes(tabId)) {
-            this.handlePaneClose(paneId);
+          const pid = String(paneId || '').trim();
+          if (!pid) continue;
+          this.handlePaneClose(pid);
+        }
+      } else if (tabId) {
+        const safeTabId = String(tabId).trim();
+        const toRemove = [];
+        this.panes.forEach((state, paneId) => {
+          if (String(state?.tabId || '').trim() === safeTabId) {
+            toRemove.push(paneId);
           }
+        });
+        for (const paneId of toRemove) {
+          this.handlePaneClose(paneId);
         }
       }
       if (this.activeTabId === tabId) {
