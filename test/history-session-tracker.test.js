@@ -40,3 +40,56 @@ test('HistorySessionTracker does not alter status based on output idle', () => {
   assert.ok(result);
   assert.equal(result.status, 'working');
 });
+
+test('HistorySessionTracker tracks pane tab bindings for custom pane ids', () => {
+  setupWindow();
+
+  const tracker = new window.HistorySessionTracker({
+    sessionId: 'test',
+    historySource: 'all',
+  });
+
+  tracker.bindPaneToTab('pane-1742012345678-abcd12', 'tab-window-1');
+
+  assert.equal(tracker.getPaneTabId('pane-1742012345678-abcd12'), 'tab-window-1');
+});
+
+test('HistorySessionTracker includes tracked tab_id in output idle events', () => {
+  setupWindow();
+
+  const payloads = [];
+  window.statusAPI = {
+    sendOutput: (payload) => payloads.push(payload),
+  };
+
+  const tracker = new window.HistorySessionTracker({
+    sessionId: 'test',
+    historySource: 'all',
+  });
+
+  tracker.bindPaneToTab('pane-1742012345678-abcd12', 'tab-window-1');
+  tracker.setPaneOutputIdle('pane-1742012345678-abcd12', true);
+
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].pane_id, 'pane-1742012345678-abcd12');
+  assert.equal(payloads[0].tab_id, 'tab-window-1');
+  assert.equal(payloads[0].idle, true);
+});
+
+test('HistorySessionTracker closes custom pane ids passed to handleTabClose', () => {
+  setupWindow();
+
+  const tracker = new window.HistorySessionTracker({
+    sessionId: 'test',
+    historySource: 'all',
+  });
+
+  tracker.bindPaneToTab('pane-1742012345678-abcd12', 'tab-window-1');
+
+  const state = tracker.ensurePaneState('pane-1742012345678-abcd12');
+  state.outputIdleTimer = setTimeout(() => {}, 1000);
+
+  tracker.handleTabClose('tab-window-1', ['pane-1742012345678-abcd12']);
+
+  assert.equal(tracker.panes.has('pane-1742012345678-abcd12'), false);
+});
