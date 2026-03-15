@@ -1610,7 +1610,6 @@
       }
       return this.extractTabIdFromPaneId(safePaneId);
     }
-
     isSessionInCurrentTab(paneId) {
       const safePaneId = String(paneId || '').trim();
       if (!safePaneId) return false;
